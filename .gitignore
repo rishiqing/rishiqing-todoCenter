@@ -4,7 +4,6 @@
 build
 gradle
 out
-gradle.properties
 gradlew
 gradlew.bat
 grails-app/assets
