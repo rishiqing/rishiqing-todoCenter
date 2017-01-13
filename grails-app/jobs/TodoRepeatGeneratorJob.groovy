@@ -1,7 +1,7 @@
+import com.rishiqing.Todo
+import com.rishiqing.TodoRepeatTag
 import com.rishiqing.data.TodoRepeatData
 import groovy.sql.Sql
-
-import java.sql.Connection
 
 /**
  * Created by solax on 2017-1-5.
@@ -13,58 +13,46 @@ class TodoRepeatGeneratorJob {
 
     def dataSource
 
+    static boolean isRunning = false
+
+    static Date currentDate = new Date ()
+
     static triggers = {
-        simple startDelay:1000*20, repeatInterval: 1000*60
+        simple startDelay:1000*20, repeatInterval: 1000 * 60
     }
 
-    def execute() {
-        Sql sql = new Sql(dataSource)
-        String query  = 'SELECT' +
-                ' trt.next_repeat_time,' +
-                ' trt.repeat_base_time,' +
-                'trt.repeat_dates,' +
-                'trt.repeat_type,' +
-                'trt.user_id,' +
-                'trt.is_close_repeat,' +
-                'trt.always_repeat,' +
-                'trt.deleted_date,' +
-                'trt.is_last_date,' +
-                'trt.repeat_over_date,' +
-                't.id,' +
-                't.p_container,' +
-                't.p_note,' +
-                't.p_parent_id,' +
-                't.p_title,' +
-                't.p_user_id,' +
-                't.repeat_tag_id,' +
-                't.clock_alert,' +
-                't.end_date,' +
-                't.start_date,' +
-                't.todo_deploy_id,' +
-                't.is_repeat_todo,' +
-                't.alert_every_day,' +
-                't.check_authority,' +
-                't.dates,' +
-                't.edit_authority,' +
-                't.inboxpcontainer ' +
-                'FROM ' +
-                'todo_repeat_tag trt, todo t ' +
-                'WHERE ' +
-                'trt.is_close_repeat = 0 ' +
-                'and t.repeat_tag_id = trt.id ' +
-                'and t.is_deleted = 0 ' +
-                'and t.is_archived = 0 ' +
-                'GROUP BY trt.id ' +
-                'HAVING t.id = ( SELECT MAX(id) from todo t1 where t1.id = t.id) '
+    def execute () {
+        // 运行条件：没有正在运行 + 新的一天
+        if (isRunning) {
+            return
+        } else {
+            println('repeat job execute...')
+            if (!this.isNewDay()) {
+                return
+            }
+        }
+        println('----------------- repeat  job start --------------------')
+        isRunning = true
+        Sql sql  = new Sql(dataSource)
         TodoRepeatData todoRepeatData = new TodoRepeatData(sql)
-        Date date1 = new Date ()
-        // 查询重复及日程数据
-        def list = todoRepeatData.fetch(query, 100)
-        Date date2 = new Date()
-        println('search time --------------- :' + (date2.getTime() - date1.getTime()))
-        //  执行逻辑，并且生成日程
+        def list = todoRepeatData.fetch()
         todoRepeatData.generator(list)
-        Date date3 = new Date()
-        println('generator time --------------- :' + (date3.getTime() - date2.getTime()))
+        println('----------------- repeat  job end --------------------')
+        // 初始化状态数据
+        currentDate = new Date()
+        isRunning = false
+    }
+
+
+    private boolean isNewDay () {
+        // 新的日期
+        Calendar calendar = Calendar.getInstance()
+        int newDay = calendar.get(Calendar.DAY_OF_YEAR)
+        // 旧的日期
+        Calendar oldCalendar = Calendar.getInstance()
+        oldCalendar.setTime(currentDate)
+        int oldDay = oldCalendar.get(Calendar.DAY_OF_YEAR)
+        if (oldDay != newDay) return true
+        return false
     }
 }

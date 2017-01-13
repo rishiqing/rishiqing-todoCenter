@@ -6,7 +6,7 @@ import spock.lang.Specification
 /**
  * See the API for {@link grails.test.mixin.domain.DomainClassUnitTestMixin} for usage instructions
  */
-@TestFor(TodoRepeat)
+@TestFor(TodoRepeatTag)
 class TodoRepeatSpec extends Specification {
 
     def setup() {
