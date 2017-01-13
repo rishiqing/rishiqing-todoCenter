@@ -53,6 +53,7 @@ class TodoRepeatDs {
         map.editAuthority      =   todo.editAuthority
         map.isArchived         =   todo.isArchived
         map.inboxPContainer    =   todo.inboxPContainer
+        map.isSystem           =   todo.isSystem
         return map
     }
 

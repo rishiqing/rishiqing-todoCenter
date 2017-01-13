@@ -38,6 +38,7 @@ class Todo {
     Long pUserId
     Long senderTodoId
     Long kanbanItemId
+    boolean isSystem = 1
 
     /**
      * map转 domain
