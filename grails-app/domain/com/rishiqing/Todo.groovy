@@ -33,13 +33,13 @@ class Todo {
     String dates
     Long pParentId
     Boolean isArchived = false
-    Long todoDeployId
     Long repeatTagId
     Long pUserId
     Long senderTodoId
     Long kanbanItemId
     boolean isSystem = 1
 
+    static belongsTo = [todoDeploy: TodoDeploy]
     /**
      * map转 domain
      * @param map
@@ -55,7 +55,7 @@ class Todo {
         todo.clockAlert         =   map.clock_alert
         todo.endDate            =   map.end_date
         todo.startDate          =   map.start_date
-        todo.todoDeployId       =   map.todo_deploy_id
+//        todo.todoDeployId       =   map.todo_deploy_id
         todo.isRepeatTodo       =   map.is_repeat_todo
         todo.alertEveryDay      =   map.alert_every_day
         todo.checkAuthority     =   map.check_authority

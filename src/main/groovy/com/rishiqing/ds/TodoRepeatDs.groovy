@@ -14,8 +14,10 @@ class TodoRepeatDs {
      * @param
      */
     static  toSqlMap(Todo todo){
+        String pTitle = todo.todoDeploy?todo.todoDeploy.pTitle:todo.pTitle
+        String pNote = todo.todoDeploy?todo.todoDeploy.pNote:todo.pNote
         def map = [:]
-        Timestamp timestamp = new Timestamp(System.currentTimeMillis())
+        Timestamp timestamp = new Timestamp(new Date().clearTime().getTime())
         map.version           =   0
         map.dateCreated       =   timestamp
         map.lastUpdated       =   timestamp
@@ -23,10 +25,10 @@ class TodoRepeatDs {
         map.pDisplayOrder    =   0
         map.pFinishedTime    =   null
         map.pIsDone           =   0
-        map.pNote             =   todo.pNote
+        map.pNote             =   pNote
         map.pParentId         =   todo.pParentId
         map.pPlanedTime       =   timestamp
-        map.pTitle            =   todo.pTitle
+        map.pTitle            =   pTitle
         map.pUserId           =   todo.pUserId
         map.createdByClient    =   'web'
         map.receiverIds        =   null
@@ -41,19 +43,19 @@ class TodoRepeatDs {
         map.kanbanItemId       =   todo.kanbanItemId
         map.isRevoke           =   0
         map.closingDateFinished =  null
-        map.endDate            =   todo.endDate
-        map.startDate          =   todo.startDate
-        map.todoDeployId       =   todo.todoDeployId
+        map.endDate            =   timestamp
+        map.startDate          =   timestamp
+        map.todoDeployId       =   null
         map.isFromSubTodo      =   0
         map.isChangeDate       =   0
-        map.isRepeatTodo       =   todo.isRepeatTodo
+        map.isRepeatTodo       =   false
         map.alertEveryDay      =   todo.alertEveryDay
         map.checkAuthority     =   todo.checkAuthority
         map.dates              =   todo.dates
         map.editAuthority      =   todo.editAuthority
         map.isArchived         =   todo.isArchived
         map.inboxPContainer    =   todo.inboxPContainer
-        map.isSystem           =   todo.isSystem
+        map.isSystem           =   true
         return map
     }
 
@@ -61,6 +63,7 @@ class TodoRepeatDs {
         def todoMap = toSqlMap(todo)
         int i = 1
         todoMap.each { key, value ->
+            println "key:${key},value:${value}"
             if (value instanceof  Timestamp) {
                 pstmt.setTimestamp(i, value);
             } else if (value instanceof  Integer) {
