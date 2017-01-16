@@ -126,9 +126,13 @@ class TodoRepeatData {
         }else if("everyWeek".equals(repeatType)){
             return isSameDayInOtherWeek(tag.repeatBaseTime.split(","),secondDay)
         }else if("everyMonth".equals(repeatType)){
-            return isSameDayInOtherMonth(tag.repeatBaseTime.split(","),secondDay)
+            /**
+             * 如果是最后一天重复则查看secondDay是否为最后一天
+             * 如果不是最后一天重复则查看baseTime是否有需要创建日程的
+             */
+            return tag.isLastDate?getLastDay(secondDay).getTime()==secondDay.getTime():isSameDayInOtherMonth(tag.repeatBaseTime.split(","),secondDay)
         }else if("everyYear".equals(repeatType)){
-            return isSameDayInOtherYear(tag.repeatBaseTime.split(","),secondDay)
+            return isSameDayInOtherYear(tag.repeatBaseTime,secondDay)
         }
         return false
     }
@@ -258,21 +262,31 @@ class TodoRepeatData {
      * @param targetDate
      * @return
      */
-    private Boolean isSameDayInOtherYear(String[] baseDates,Date targetDate){
-        if(!baseDates || !targetDate){
+    private Boolean isSameDayInOtherYear(String baseDate,Date targetDate){
+        if(!baseDate || !targetDate){
             return false
         }
         Calendar cTarget = targetDate.toCalendar()
-        for(int i=0;i<baseDates.length;i++){
-            Date baseDate = Date.parse("yyyyMMdd",baseDates[i])
-            if(baseDate == null){
-                continue
-            }
-            Calendar cByI = baseDate.toCalendar()
-            if(cTarget.get(Calendar.DAY_OF_YEAR)==cByI.get(Calendar.DAY_OF_YEAR)){
-                return true
-            }
+        Date b = Date.parse("yyyyMMdd",baseDate)
+        if(b == null){
+            return false
+        }
+        Calendar cByI = b.toCalendar()
+        if(cTarget.get(Calendar.DAY_OF_YEAR)==cByI.get(Calendar.DAY_OF_YEAR)){
+            return true
         }
         return false
+    }
+
+    /**
+     * 谋取某天的月份中最后一天
+     * @param date
+     * @return
+     */
+    private Date getLastDay(Date date){
+        def cal = date.toCalendar()
+        cal.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH)+1, 1, 0, 0, 0)
+        cal.add(Calendar.DAY_OF_MONTH,-1)
+        return cal.getTime()
     }
 }
