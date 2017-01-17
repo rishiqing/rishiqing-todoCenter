@@ -17,17 +17,18 @@ class TodoRepeatDs {
         String pTitle = todo.todoDeploy?todo.todoDeploy.pTitle:todo.pTitle
         String pNote = todo.todoDeploy?todo.todoDeploy.pNote:todo.pNote
         def map = [:]
-        Timestamp timestamp = new Timestamp(new Date().clearTime().getTime())
+        Timestamp timestampNow = new Timestamp(new Date().getTime())
+        Timestamp timestampToday = new Timestamp(new Date().clearTime().getTime())
         map.version           =   0
-        map.dateCreated       =   timestamp
-        map.lastUpdated       =   timestamp
+        map.dateCreated       =   timestampNow
+        map.lastUpdated       =   timestampNow
         map.pContainer       =   todo.pContainer
-        map.pDisplayOrder    =   0
+        map.pDisplayOrder    =   todo.pDisplayOrder
         map.pFinishedTime    =   null
         map.pIsDone           =   0
         map.pNote             =   pNote
         map.pParentId         =   todo.pParentId
-        map.pPlanedTime       =   timestamp
+        map.pPlanedTime       =   timestampToday
         map.pTitle            =   pTitle
         map.pUserId           =   todo.pUserId
         map.createdByClient    =   'web'
@@ -43,8 +44,8 @@ class TodoRepeatDs {
         map.kanbanItemId       =   todo.kanbanItemId
         map.isRevoke           =   0
         map.closingDateFinished =  null
-        map.endDate            =   timestamp
-        map.startDate          =   timestamp
+        map.endDate            =   timestampToday
+        map.startDate          =   timestampToday
         map.todoDeployId       =   null
         map.isFromSubTodo      =   0
         map.isChangeDate       =   0
@@ -63,7 +64,6 @@ class TodoRepeatDs {
         def todoMap = toSqlMap(todo)
         int i = 1
         todoMap.each { key, value ->
-            println "key:${key},value:${value}"
             if (value instanceof  Timestamp) {
                 pstmt.setTimestamp(i, value);
             } else if (value instanceof  Integer) {

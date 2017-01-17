@@ -165,6 +165,7 @@ class TodoRepeatData {
      */
     def generator (def list) {
         def resultList = []
+        StringBuffer sb = new StringBuffer()
         list.each { it ->
             // 经过各种判断，如果确定需要保存到数据库，  则存入resultList中
             if (it) {
@@ -172,17 +173,23 @@ class TodoRepeatData {
                 TodoRepeatTag tag = it.repeatTag
                 Date date = it.date
                 if(shouldBeGenerated(todo,tag,date)){
-                    println "this:${true}"
                     resultList.add(todo)
-                    todo.isRepeatTodo = true
-                    todo.save(flush: true)
+                    sb.append("${todo.id},")
+//                    todo.isRepeatTodo = true
+//                    todo.save(flush: true)
                 }
-                println "this:${true}"
             }
         }
         println('todo insert list size: ' + resultList.size())
         // 执行批量插入
         this.batchInsert(resultList)
+        String todoIds = sb.toString()
+        if(todoIds && !"".equals(todoIds)){
+            println "todo update isRepeatTodo start"
+            println "UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")"
+            sql.executeUpdate("UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")")
+            println "todo update isRepeatTodo end"
+        }
     }
 
     def batchInsert (def list = []) {
