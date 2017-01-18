@@ -78,7 +78,7 @@ class TodoRepeatData {
         int listSize = list ? list.size() : 0
         List needCreateTodos = []
         for(def it: list){
-//            try{
+            try{
                 //获取
                 Boolean need = needCreateForToday(it,date1)
                 if(!need){
@@ -89,17 +89,18 @@ class TodoRepeatData {
                     eq('repeatTagId', id)
                     sqlRestriction('1=1 order by this_.id desc limit 1')
                 }
-                println todo.id
-                Map map = [todo: todo,repeatTag: it,date: date1]
+                if(todo){
+                    Map map = [todo: todo,repeatTag: it,date: date1]
 
-                needCreateTodos.add(map)
+                    needCreateTodos.add(map)
 
+                }
                 i ++
                 // 计算百分比
                 this.percent(listSize, i)
-//            }catch(Exception e) {
-//                println "${date1.format("yyyy-MM-dd")}这天对应的重复id为${it.id}生成失败。"
-//            }
+            }catch(Exception e) {
+                println "${date1.format("yyyy-MM-dd")}这天对应的重复id为${it.id}生成失败。"
+            }
         }
         Date date3 = new Date()
         println('fetch finish : ' + (date3.getTime() - date2.getTime()))
@@ -186,7 +187,7 @@ class TodoRepeatData {
         String todoIds = sb.toString()
         if(todoIds && !"".equals(todoIds)){
             println "todo update isRepeatTodo start"
-            println "UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")"
+//            println "UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")"
             sql.executeUpdate("UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")")
             println "todo update isRepeatTodo end"
         }
