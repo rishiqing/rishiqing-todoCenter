@@ -142,6 +142,9 @@ class TodoRepeatData {
         if(!todo || !it || !date1){
             return false
         }
+        if("inbox".equals(todo.pContainer)){
+            return false
+        }
         if(!todo.pPlanedTime){
             return false
         }
