@@ -39,6 +39,7 @@ class Todo {
     Long kanbanItemId
     boolean isSystem = 1
 
+    static hasMany = [clock:Clock];
     static belongsTo = [todoDeploy: TodoDeploy]
     /**
      * map转 domain

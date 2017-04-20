@@ -1,5 +1,7 @@
 package com.rishiqing.data
 
+import com.rishiqing.Alert
+import com.rishiqing.Clock
 import com.rishiqing.Todo
 import com.rishiqing.TodoRepeatTag
 import com.rishiqing.ds.TodoRepeatDs
@@ -35,6 +37,32 @@ class TodoRepeatData {
 
     TodoRepeatData (Sql sql) {
         this.sql = sql
+    }
+
+    // 数据库连接对象
+    private Connection conn = null;
+    // 预编译语言对象
+    private PreparedStatement pstmt1 = null;
+    private PreparedStatement pstmt2 = null;
+    private PreparedStatement pstmt3 = null;
+    private PreparedStatement pstmt4 = null;
+
+    private void closeResource(){
+        if(conn!=null){
+            conn.close();
+        }
+        if(pstmt1!=null){
+            pstmt1.close();
+        }
+        if(pstmt2!=null){
+            pstmt2.close();
+        }
+        if(pstmt3!=null){
+            pstmt3.close();
+        }
+        if(pstmt4!=null){
+            pstmt4.close();
+        }
     }
 
     /**
@@ -98,14 +126,15 @@ class TodoRepeatData {
                 }
                 // 获取 repeatTag 的id
                 long id = repeatTag.id;
-                // 查找到 repeatTag 对应的日程
+                // 查找到 repeatTag 对应的最有一条日程
                 Todo todo  = Todo.createCriteria().get{
                     eq('repeatTagId', id)
                     sqlRestriction('1=1 order by this_.id desc limit 1')
                 }
+                Clock clock = todo.clock;
                 // 如果日程存在，那么组成 map 添加到需要创建的日程列表里。
                 if(todo){
-                    Map map = [todo: todo,repeatTag: repeatTag,date: startSearch];
+                    Map map = [todo: todo,repeatTag: repeatTag,clock:clock?clock:null,date: startSearch];
                     needCreateTodos.add(map);
                 }
                 // 阀值 + 1
@@ -202,8 +231,10 @@ class TodoRepeatData {
      * @param list 存放日程的 list
      */
     def generator (def list) {
-        // 开始启动创建
-        def resultList = []
+        // 需要创建的日程结果
+        def todoResultList = [];
+        // 需要创建的时间和提醒的 map
+        Map<TodoRepeatTag,Todo> tagTodoMap = [:];
         StringBuffer sb = new StringBuffer()
         list.each { it ->
             // 经过各种判断，如果确定需要保存到数据库，  则存入resultList中
@@ -214,10 +245,16 @@ class TodoRepeatData {
                 TodoRepeatTag tag = it.repeatTag;
                 // 获取需要创建日程的日期
                 Date date = it.date;
+                // 获取提醒
+                Clock clock = it.clock
                 // 判断是否应该生成重复
                 if(shouldBeGenerated(todo,tag,date)){
                     // 需要生成的日程，添加到结果集中
-                    resultList.add(todo)
+                    todoResultList.add(todo)
+                    // 添加到需要创建的时间和提醒结果中
+                    if(clock){
+                        tagTodoMap.put(tag,todo);
+                    }
                     // 保存需要创建重复的日程的id
                     sb.append("${todo.id},")
 //                    todo.isRepeatTodo = true
@@ -226,9 +263,10 @@ class TodoRepeatData {
             }
         }
         // 需要进行重复日程创建的日程的数量
-        println('todo insert list size: ' + resultList.size())
+        println('todo insert list size: ' + todoResultList.size())
         // 执行批量插入
-        this.batchInsert(resultList)
+        this.batchInsertTodo(todoResultList)
+        this.batchInsertClock(tagTodoMap);
         String todoIds = sb.toString()
         if(todoIds && !"".equals(todoIds)){
             println "todo update isRepeatTodo start"
@@ -243,23 +281,94 @@ class TodoRepeatData {
      * @param list
      * @return
      */
-    def batchInsert (def list = []) {
-        // 获取当前日期
-        Date  date = new Date ();
-        //
-        Connection conn = sql.getDataSource().getConnection()
-        conn.setAutoCommit(false);
-        String query = "INSERT INTO todo (version ,  date_created ,  last_updated ,  p_container,  p_display_order,  p_finished_time,  p_is_done,  p_note,  p_parent_id,  p_planed_time,  p_title,  p_user_id,  created_by_client,  receiver_ids,  receiver_names,  sender_id,  is_deleted,  cid,  repeat_tag_id,  sender_todo_id,  team_todo_read,  clock_alert,  kanban_item_id,  is_revoke,  closing_date_finished,  end_date,  start_date,  todo_deploy_id,  is_from_sub_todo,  is_change_date,  is_repeat_todo,  alert_every_day,  check_authority,  dates,  edit_authority,  is_archived,  inboxpcontainer, is_system)  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        PreparedStatement pstmt = conn.prepareStatement(query)
-        list.each { it ->
-            TodoRepeatDs.prepareInsert(it, pstmt)
+    def batchInsertTodo (def list = []) {
+        try{
+            // 开始执行处理的时间 (把日程装入预编译对象)
+            Date  startHandle = new Date ();
+            // 获取数据库连接
+            conn = sql.getDataSource().getConnection()
+            // 设置自动提交为false
+            conn.setAutoCommit(false);
+            // sql
+            String query = "INSERT INTO todo (version ,  date_created ,  last_updated ,  p_container,  p_display_order,  p_finished_time,  p_is_done,  p_note,  p_parent_id,  p_planed_time,  p_title,  p_user_id,  created_by_client,  receiver_ids,  receiver_names,  sender_id,  is_deleted,  cid,  repeat_tag_id,  sender_todo_id,  team_todo_read,  clock_alert,  kanban_item_id,  is_revoke,  closing_date_finished,  end_date,  start_date,  todo_deploy_id,  is_from_sub_todo,  is_change_date,  is_repeat_todo,  alert_every_day,  check_authority,  dates,  edit_authority,  is_archived,  inboxpcontainer, is_system)  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            // 预编译
+            pstmt1 = conn.prepareStatement(query)
+            list.each { it ->
+                // 向 预编译对象中添加要插入的日程信息
+                TodoRepeatDs.prepareInsert(it, pstmt1)
+            }
+            // 结束处理
+            Date  endHandle = new Date ()
+            println('insert prepare complate time : ' + (endHandle.getTime() - startHandle.getTime()))
+            // 执行批量插入
+            pstmt1.executeBatch()
+            // 提交
+            conn.commit();
+            // 结束插入
+            Date endInsert = new Date()
+            println('executeBatch:' + (endInsert.getTime() - endHandle.getTime()))
+        } catch(Exception e){
+            e.printStackTrace();
+            return;
+        } finally {
+            closeResource();
+            return;
         }
-        Date  date2 = new Date ()
-        println('insert prepare complate time : ' + (date2.getTime() - date.getTime()))
-        pstmt.executeBatch()
-        conn.commit();
-        Date date1 = new Date()
-        println('executeBatch:' + (date1.getTime() - date2.getTime()))
+    }
+
+    /**
+     *  批量插入提醒
+     */
+    def batchInsertClock(Map<TodoRepeatTag,Todo> map = [:]){
+        try{
+            // 开始执行处理的时间 (把日程装入预编译对象)
+            Date  startHandle = new Date ();
+            // 获取数据库连接
+            conn = sql.getDataSource().getConnection()
+            // 设置自动提交为false
+            conn.setAutoCommit(false);
+            // 执行遍历操作
+            map.entrySet().each { es ->
+                // 获取到重复标记和日程信息
+                TodoRepeatTag tag = es.key;
+                Todo sourceTodo = es.value;
+                // 设置一个今天的日期
+                Date taskDate = new Date().clearTime();
+                // 查询 tag 所标记的最后一条日程
+                Todo newTodo  = Todo.createCriteria().get{
+                    eq('repeatTagId', id)
+                    sqlRestriction('1=1 order by this_.id desc limit 1')
+                }
+                // 查看 map 中的todo 在今天是否有 clock
+                Clock clock = Clock.findByTaskDateAndTodo(taskDate,sourceTodo);
+                // 有则把clock 给新生成的日程（即最后一条日程）
+                if(clock){
+                    // sql
+                    String query1 = "update clock as c set c.todo_id = ? where c.id = ?";
+                    // 预编译
+                    pstmt1 = conn.prepareStatement(query1);
+                    // 把要更新的数据放入预编译对象中
+                    TodoRepeatDs.prepareInsert(newTodo,clock,pstmt2,"update");
+                    // 查看当前 clock 是否有 alert，有则更新 alert 的时间
+                    List alerts = Alert.findAllByClock(clock);
+                    alerts.each { alert ->
+                        // 处理 alert 的提醒时间
+                    }
+                }
+                // 没有则进行创建操作，把 map 中todo对应的提醒，创建出来一个今天的副本，给最新的日程(即最后一条日程)
+                else {
+                    // sql
+                    String query = "";
+                    // 预编译
+                    pstmt3 = conn.prepareStatement(query)
+                }
+            }
+            // 结束处理
+            Date endHandle = new Date();
+        } catch(Exception e){
+            e.printStackTrace();
+            return;
+        }
     }
 
     /**
