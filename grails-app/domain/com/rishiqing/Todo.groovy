@@ -34,7 +34,7 @@ class Todo {
     Long pParentId
     Boolean isArchived = false
     Long repeatTagId
-    Long pUserId
+    User pUser
     Long senderTodoId
     Long kanbanItemId
     boolean isSystem = 1

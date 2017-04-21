@@ -2,6 +2,7 @@ package com.rishiqing.data
 
 import com.rishiqing.Todo
 import com.rishiqing.TodoRepeatTag
+import com.rishiqing.User
 import com.rishiqing.ds.TodoRepeatDs
 import groovy.sql.Sql
 import javax.sql.DataSource
@@ -139,6 +140,15 @@ class TodoRepeatData {
     }
 
     private Boolean shouldBeGenerated(Todo todo,TodoRepeatTag it,Date date1){
+        User user = todo.pUser
+        if(!user.lastLoginDate){
+            println "11111111111"
+            return false
+        }
+        if(date1-user.lastLoginDate>=30){
+            println "22222222222"
+            return false
+        }
         if(!todo || !it || !date1){
             return false
         }
