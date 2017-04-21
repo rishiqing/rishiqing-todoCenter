@@ -142,11 +142,9 @@ class TodoRepeatData {
     private Boolean shouldBeGenerated(Todo todo,TodoRepeatTag it,Date date1){
         User user = todo.pUser
         if(!user.lastLoginDate){
-            println "11111111111"
             return false
         }
         if(date1-user.lastLoginDate>=30){
-            println "22222222222"
             return false
         }
         if(!todo || !it || !date1){
