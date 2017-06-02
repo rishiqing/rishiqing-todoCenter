@@ -1,5 +1,5 @@
-import com.rishiqing.Todo
-import com.rishiqing.TodoRepeatTag
+import com.rishiqing.Clock
+import com.rishiqing.data.ClockData
 import com.rishiqing.data.TodoRepeatData
 import groovy.sql.Sql
 
@@ -73,20 +73,27 @@ class TodoRepeatGeneratorJob {
         currentDate = new Date();
         // 创建 sql 对象
         Sql sql  = new Sql(dataSource);
-        // 创建重复日程生成对象
-        TodoRepeatData todoRepeatData = new TodoRepeatData(sql);
+
         // 开始进行生成操作
         println ("----------------- repeat todo job start --------------------");
+        // 创建重复日程生成对象
+        TodoRepeatData todoRepeatData = new TodoRepeatData(sql);
         // 开始查询，获取到所有需要进行创建的重复日程的信息.
         List<Map> needCreateTodos = todoRepeatData.fetch();
         // 启动日程创建
-        Map<Long,Long> oldIdAndNewIdMap = todoRepeatData.generator(needCreateTodos);
+        Map<Long,Long> oldTodoIdAndNewTodoIdMap = todoRepeatData.generator(needCreateTodos);
         // 创建结束
         println("----------------- repeat todo job end --------------------");
-        println("----------------- clock job start --------------------");
 
+        println("----------------- clock job start --------------------");
+        ClockData clockData = new ClockData(sql);
+        // 查询需要创建的时间
+        List<Clock> needCreateClock = clockData.fetch(oldTodoIdAndNewTodoIdMap);
+        // 进行时间的创建操作
+        Map<Long,Long> oldClockIdAndNewClockIdMap = clockData.generator(needCreateClock,oldTodoIdAndNewTodoIdMap);
 
         println("----------------- clock job end --------------------");
+
         println("----------------- alter job start --------------------");
 
 

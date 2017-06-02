@@ -145,7 +145,7 @@ class TodoRepeatData {
         Long oldAutoIncrement = handleTodoAutoIncrement(todoResultList);
 
         // 执行日程批量插入，返回日程新老 id 映射。
-        Map oldIdAndNewIdMap = batchInsertTodo(todoResultList,oldAutoIncrement);
+        Map oldTodoIdAndNewTodoIdMap = batchInsertTodo(todoResultList,oldAutoIncrement);
 
         // 打开重复日程的创建开关 (isRepeatTodo)，当 isRepeatTod0 = 1是，第一天的日程将不显示延期。
         String todoIds = todoIdsSb.toString();
@@ -155,7 +155,7 @@ class TodoRepeatData {
             println "todo update isRepeatTodo end"
         }
         // 返回日程新老 Id 映射
-        return oldIdAndNewIdMap;
+        return oldTodoIdAndNewTodoIdMap;
     }
 
     /**
@@ -170,7 +170,7 @@ class TodoRepeatData {
             // 设置自动提交为false，在添加完所有要插入的数据之后，批量进行插入。
             conn.setAutoCommit(false);
             // 获取要生成的日程列表的长度
-            String query1 = "select count(id) from `todo` as t for update";
+            String query1 = "select max(id) from `todo` as t for update";
             // 预编译
             pstmt = conn.prepareStatement(query1);
             // 执行查询，获取结果集
@@ -178,7 +178,7 @@ class TodoRepeatData {
             // 获取结果集
             Long oldAutoIncrement = rs.getLong(1);
             // 获取要插入的日程的数量
-            Integer size = todoResultList.size();
+            Long size = todoResultList.size();
             // 获取新的自增长值 = 老的自增长 + 插入日程的长度 + 1;
             Long newAutoIncrement = oldAutoIncrement + size + 1;
             // 更新表
@@ -207,7 +207,7 @@ class TodoRepeatData {
      */
     private def batchInsertTodo (def list = [],Long oldAutoIncrement) {
         // 老 id 和 新 id 的映射
-        Map oldIdAndNewIdMap = [:];
+        Map oldTodoIdAndNewTodoIdMap = [:];
         try{
             // 开始执行处理的时间 (把日程装入预编译对象)
             Date startHandle = new Date ();
@@ -224,7 +224,7 @@ class TodoRepeatData {
                 // 要插入的日程的 id
                 Long todoId = oldAutoIncrement ++;
                 // 向 预编译对象中添加要插入的日程信息
-                TodoRepeatDs.prepareInsert(it, pstmt,oldIdAndNewIdMap,todoId)
+                TodoRepeatDs.prepareInsert(it, pstmt,oldTodoIdAndNewTodoIdMap,todoId)
             }
 
             // 结束处理
@@ -240,7 +240,7 @@ class TodoRepeatData {
             Date endInsert = new Date()
             println('executeBatch:' + (endInsert.getTime() - endHandle.getTime()))
             // 返回日程老 id 和新 id 的 Map
-            return oldIdAndNewIdMap;
+            return oldTodoIdAndNewTodoIdMap;
         } catch(SQLException e){
             e.printStackTrace();
         } finally {
