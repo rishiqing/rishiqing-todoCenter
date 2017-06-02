@@ -6,7 +6,7 @@ import groovy.sql.Sql
 /**
  * Created by solax on 2017-1-5.
  *
- * 重复日程生成器，每天 24：00后开始生成日程
+ * 重复日程生成器，每天 00:05 后开始生成日程
  *
  */
 class TodoRepeatGeneratorJob {
@@ -69,20 +69,28 @@ class TodoRepeatGeneratorJob {
     }
 
     def execute(){
-        // 开始进行生成操作
-        println('----------------- repeat  job start --------------------')
         // 设置当前运行时间
         currentDate = new Date();
         // 创建 sql 对象
         Sql sql  = new Sql(dataSource);
         // 创建重复日程生成对象
         TodoRepeatData todoRepeatData = new TodoRepeatData(sql);
+        // 开始进行生成操作
+        println ("----------------- repeat todo job start --------------------");
         // 开始查询，获取到所有需要进行创建的重复日程的信息.
-        def list = todoRepeatData.fetch();
-        // 启动创建
-        todoRepeatData.generator(list);
+        List<Map> needCreateTodos = todoRepeatData.fetch();
+        // 启动日程创建
+        Map<Long,Long> oldIdAndNewIdMap = todoRepeatData.generator(needCreateTodos);
         // 创建结束
-        println('----------------- repeat  job end --------------------')
+        println("----------------- repeat todo job end --------------------");
+        println("----------------- clock job start --------------------");
+
+
+        println("----------------- clock job end --------------------");
+        println("----------------- alter job start --------------------");
+
+
+        println("----------------- alert job end --------------------");
         // 结束
         return;
     }

@@ -17,15 +17,16 @@ class Alert {
     String schedule;
     /** 闹钟响铃时间　*/
     Date alertTime;   // 这个值需要后台自己计算并存入
-
+    /** 所属时间的 id */
+    Long clockId;
     /** 惯例配置 */
     static mapping = {
         version(false);
     }
-    /** 一对一 */
-    static belongsTo = [
-            clock:Clock  // 一个提醒归属于一个闹钟
-    ]
+//    /** 一对一 */
+//    static belongsTo = [
+//            clock:Clock  // 一个提醒归属于一个闹钟
+//    ]
 
 
     /**

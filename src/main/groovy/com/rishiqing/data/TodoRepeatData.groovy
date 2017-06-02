@@ -1,476 +1,251 @@
 package com.rishiqing.data
 
-import com.rishiqing.Alert
-import com.rishiqing.Clock
 import com.rishiqing.Todo
 import com.rishiqing.TodoRepeatTag
 import com.rishiqing.ds.TodoRepeatDs
+import com.rishiqing.util.CommonUtil
+import com.rishiqing.util.ResourceUtil
 import groovy.sql.Sql
-import javax.sql.DataSource
 import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.PreparedStatement;
+import java.sql.PreparedStatement
+import java.sql.ResultSet
+import java.sql.SQLException;
 
 
 /**
  * Created by solax on 2017-1-6.
+ *
  */
 class TodoRepeatData {
 
-    Sql sql
-
-    // 总条数
-    int count
-
-    // 分页
-    int offset = 1
-
-    // 分页
-    int maxOffset
-
-    // 循环次数
-    int doQueryCount
-
-    // 查询语句
-    String query
-
-
+    // groovy sql 对象
+    private Sql sql = null;
+    // 数据库连接对象
+    private Connection conn = null;
+    // 预编译语言对象
+    private PreparedStatement pstmt = null;
+    // 数据库结果集对象
+    private ResultSet rs = null;
+    // 构造
     TodoRepeatData (Sql sql) {
         this.sql = sql
     }
 
-    // 数据库连接对象
-    private Connection conn = null;
-    // 预编译语言对象
-    private PreparedStatement pstmt1 = null;
-    private PreparedStatement pstmt2 = null;
-    private PreparedStatement pstmt3 = null;
-    private PreparedStatement pstmt4 = null;
-
-    private void closeResource(){
-        if(conn!=null){
-            conn.close();
-        }
-        if(pstmt1!=null){
-            pstmt1.close();
-        }
-        if(pstmt2!=null){
-            pstmt2.close();
-        }
-        if(pstmt3!=null){
-            pstmt3.close();
-        }
-        if(pstmt4!=null){
-            pstmt4.close();
-        }
-    }
-
-    /**
-     * 查询方法
-     * @param query
-     * @param intMaxOffset
-     * @return
-     */
-    def fetch (String query, int intMaxOffset) {
-        this.fetch(query, intMaxOffset) {}
-    }
-
-
-    /**
-     * 设置分页信息
-     * @param offset
-     * @param maxOffset
-     */
-    def setMaxOffset (int maxOffset) {
-        this.maxOffset = maxOffset
-    }
+    // ================================== fetch start =======================================//
 
     /**
      * 查询器，用来查询需要创建重复日程的日程信息。
      * @return
      */
     def fetch() {
-        // 获取当前日期
-        Date startSearch =  new Date ().clearTime()
+        // 开始查询的日期和时间
+        Date startSearch =  new Date();
+
+        // 获取一个检索时间
+        Date searchDate = new Date().clearTime();
         // 查询 repeatTag
-        def repeatTagList = TodoRepeatTag.createCriteria().repeatTagList {
+        List<TodoRepeatTag> repeatTagList = (List<TodoRepeatTag>)TodoRepeatTag.createCriteria().list {
             and {
                 //一直重复或者重复截止于的时间大于等于今天
                 or {
                     eq("alwaysRepeat", true)
-                    ge("repeatOverDate",startSearch)
+                    ge("repeatOverDate",searchDate)
                 }
                 // 没有关闭重复
                 eq("isCloseRepeat",false)
             }
         }
-        Date endSearch = new Date()
+
+        Date endSearch = new Date();  // 用来记录重复日程标记结束查询的时间
         // 搜索时长
-        println('search : ' + (endSearch.getTime() - startSearch. getTime()))
+        println("search repeatTag time: " + (endSearch.getTime() - startSearch. getTime()));
+
         // 获取list的长度
-        int listSize = repeatTagList ? repeatTagList.size() : 0
+        Integer listSize = repeatTagList ? repeatTagList.size() : 0;
         // 重复标记的数量，每个标记对应一个重复的日程。
-        println('repeatTagList size : ' + listSize)
-        // 阀值，用来计算百分比使用
-        int i = 0
+        println('repeatTagList size : ' + listSize);
+
+        // 阀值，用来计算查询结果的百分比使用
+        Integer i = 0;
+
         // 需要进行创建的日程组成的list
-        List needCreateTodos = []
+        List<Map> needCreateTodos = [];
         // 遍历查询到的日程的list
-        for(def repeatTag: repeatTagList){
+        for(TodoRepeatTag repeatTag: repeatTagList){
             try{
                 // 查询当前重复标记所标记的日程，是否需要进行创建操作
-                Boolean need = needCreateForToday(repeatTag,startSearch);
-                // 如果不需要进行创建
+                Boolean need = CommonUtil.needCreateForToday(repeatTag,searchDate);
+                // 如果不需要
                 if(!need){
                     continue;
                 }
                 // 获取 repeatTag 的id
-                long id = repeatTag.id;
-                // 查找到 repeatTag 对应的最有一条日程
-                Todo todo  = Todo.createCriteria().get{
-                    eq('repeatTagId', id)
-                    sqlRestriction('1=1 order by this_.id desc limit 1')
+                Long id = repeatTag.id;
+                // 查找到 repeatTag 对应的最后一条日程
+                Todo todo  = (Todo)Todo.createCriteria().get{
+                    eq('repeatTagId', id);
+                    // 通过 id 排序查找到最大的那一条
+                    sqlRestriction('1=1 order by this_.id desc limit 1');
                 }
-                Clock clock = todo.clock;
+
                 // 如果日程存在，那么组成 map 添加到需要创建的日程列表里。
                 if(todo){
-                    Map map = [todo: todo,repeatTag: repeatTag,clock:clock?clock:null,date: startSearch];
+                    // 把基本信息装入 map ，添加到需要创建的日程的列表中
+                    Map map = [todo: todo,repeatTag: repeatTag,date: searchDate];
                     needCreateTodos.add(map);
                 }
                 // 阀值 + 1
-                i ++
-                // 计算百分比
-                this.percent(listSize, i);
+                i ++;
+                // 计算百分比并输出，检测查询什么时候完成。
+                CommonUtil.percent(listSize, i);
+
             }catch(Exception e) {
-                println "${startSearch.format("yyyy-MM-dd")}这天对应的重复id为${it.id}生成失败。";
+                e.printStackTrace();
+                println "${startSearch.format("yyyy-MM-dd")}这天对应的重复id为${repeatTag.id}生成失败。";
             }
         }
         // 完成所有需要创建的重复日程的查询
         Date endFetch = new Date();
-        println('fetch finish : ' + (endFetch.getTime() - endSearch.getTime()));
+        println("fetch finish : " + (endFetch.getTime() - endSearch.getTime()));
         return needCreateTodos;
     }
 
-    /**
-     * 通过一个重复找需要生成的那天
-     * @param tag          重复
-     * @param secondDay    需要生成新日程的那一天
-     */
-    def Boolean needCreateForToday(TodoRepeatTag tag,Date secondDay){
-        // 参数错误
-        if(!tag || !secondDay){
-            return false
-        }
-        // 如果重复标记基本时间没有，或者已经被关闭，或者没有重复类型（每天每周每月每年）
-        if(!tag.repeatBaseTime || tag.isCloseRepeat || !tag.repeatType){
-            return false
-        }
-        // 获取重复类型（每天每周每月每年）
-        String repeatType = tag.repeatType
-        //每天重复
-        if("everyDay".equals(repeatType)){
+    // ================================== fetch end =======================================//
 
-            // 获取重复基本日期
-            Date repeatBaseTime = Date.parse("yyyyMMdd",tag.repeatBaseTime)
-            // 重复的基本日期是否 < 生成重复的日期
-            return repeatBaseTime.getTime()<secondDay.getTime()
+    // ================================ generate start ====================================//
 
-        }// 每周重复
-        else if("everyWeek".equals(repeatType)){
-
-            return isSameDayInOtherWeek(tag.repeatBaseTime.split(","),secondDay);
-
-        }// 如果是每月重复
-        else if("everyMonth".equals(repeatType)){
-
-            /*
-             * 如果是最后一天重复则查看secondDay是否为最后一天
-             * 如果不是最后一天重复则查看baseTime是否有需要创建日程的
-             */
-            return tag.isLastDate?getLastDay(secondDay).getTime()==secondDay.getTime():isSameDayInOtherMonth(tag.repeatBaseTime.split(","),secondDay);
-        }// 如果是每年重复
-        else if("everyYear".equals(repeatType)){
-
-            return isSameDayInOtherYear(tag.repeatBaseTime,secondDay);
-
-        }
-        return false;
-    }
-
-    private Boolean shouldBeGenerated(Todo todo,TodoRepeatTag it,Date date1){
-        // 参数验证
-        if(!todo || !it || !date1){
-            return false
-        }
-        // 查看当前日程是否在收纳箱，如果在，那么不为它创建
-        if("inbox".equals(todo.pContainer)){
-            return false
-        }
-        // 查看日程是否没有 pPlanedTime ，没有则不创建
-        if(!todo.pPlanedTime){
-            return false
-        }
-        // 日程没有被完成
-        if(!todo.pIsDone){
-            // 查看是否有开始和结束时间
-            if(todo.startDate && todo.endDate){
-                //如果date1的时间在上一条日程的截止时间内，则不生成
-                if(todo.startDate.getTime()<=date1.getTime()
-                        && todo.endDate.getTime()>=date1.getTime()) return false
-            }else{
-                //如果上一条日程的时间和要生成的日期相等则不生成
-                if(todo.pPlanedTime.getTime()>=date1.getTime()) return false
-            }
-        }
-        //如果重复里已被删除的日期里包含了date1，则不生成
-        if(it.deletedDate && it.deletedDate.split(",").contains(date1.format("yyyyMMdd"))) return false
-        return true
-    }
     /**
      * 日程重复生成处理逻辑
-     * @param list 存放日程的 list
+     * @param list 存放日程的 list，此list 元素的结构 [todo: todo,repeatTag: repeatTag,date: searchDate]
      */
     def generator (def list) {
         // 需要创建的日程结果
         def todoResultList = [];
-        // 需要创建的时间和提醒的 map
-        Map<TodoRepeatTag,Todo> tagTodoMap = [:];
-        StringBuffer sb = new StringBuffer()
+
+        StringBuffer todoIdsSb = new StringBuffer()
         list.each { it ->
             // 经过各种判断，如果确定需要保存到数据库，  则存入resultList中
-            if (it) {
-                // 获取日程
-                Todo todo = it.todo;
-                // 获取日程重复标记
-                TodoRepeatTag tag = it.repeatTag;
-                // 获取需要创建日程的日期
-                Date date = it.date;
-                // 获取提醒
-                Clock clock = it.clock
-                // 判断是否应该生成重复
-                if(shouldBeGenerated(todo,tag,date)){
-                    // 需要生成的日程，添加到结果集中
-                    todoResultList.add(todo)
-                    // 添加到需要创建的时间和提醒结果中
-                    if(clock){
-                        tagTodoMap.put(tag,todo);
-                    }
-                    // 保存需要创建重复的日程的id
-                    sb.append("${todo.id},")
-//                    todo.isRepeatTodo = true
-//                    todo.save(flush: true)
-                }
+            Todo todo = it.todo;
+            // 获取日程重复标记
+            TodoRepeatTag tag = it.repeatTag;
+            // 获取需要创建日程的日期
+            Date date = it.date;
+            // 判断是否应该生成重复
+            if(CommonUtil.shouldBeGenerated(todo,tag,date)){
+                // 需要生成的日程，添加到结果集中
+                todoResultList.add(todo);
+                // 保存需要创建重复的日程的id
+                todoIdsSb.append("${todo.id},");
             }
         }
         // 需要进行重复日程创建的日程的数量
         println('todo insert list size: ' + todoResultList.size())
-        // 执行批量插入
-        this.batchInsertTodo(todoResultList)
-        this.batchInsertClock(tagTodoMap);
-        String todoIds = sb.toString()
+
+        // 进行重置 id 值的操作，把当前需要创建重复的日程的空间预留出来
+        Long oldAutoIncrement = handleTodoAutoIncrement(todoResultList);
+
+        // 执行日程批量插入，返回日程新老 id 映射。
+        Map oldIdAndNewIdMap = batchInsertTodo(todoResultList,oldAutoIncrement);
+
+        // 打开重复日程的创建开关 (isRepeatTodo)，当 isRepeatTod0 = 1是，第一天的日程将不显示延期。
+        String todoIds = todoIdsSb.toString();
         if(todoIds && !"".equals(todoIds)){
             println "todo update isRepeatTodo start"
-//            println "UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")"
             sql.executeUpdate("UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")")
             println "todo update isRepeatTodo end"
         }
+        // 返回日程新老 Id 映射
+        return oldIdAndNewIdMap;
     }
 
     /**
-     * 披上插入方法
+     * 处理日程自增长的值
+     * @param todoResultList
+     * @return
+     */
+    private def handleTodoAutoIncrement(List todoResultList){
+        try{
+            // 获取数据库连接
+            conn = sql.getDataSource().getConnection();
+            // 设置自动提交为false，在添加完所有要插入的数据之后，批量进行插入。
+            conn.setAutoCommit(false);
+            // 获取要生成的日程列表的长度
+            String query1 = "select count(id) from `todo` as t for update";
+            // 预编译
+            pstmt = conn.prepareStatement(query1);
+            // 执行查询，获取结果集
+            rs = pstmt.executeQuery();
+            // 获取结果集
+            Long oldAutoIncrement = rs.getLong(1);
+            // 获取要插入的日程的数量
+            Integer size = todoResultList.size();
+            // 获取新的自增长值 = 老的自增长 + 插入日程的长度 + 1;
+            Long newAutoIncrement = oldAutoIncrement + size + 1;
+            // 更新表
+            String query2 = "alter table `todo` AUTO_INCREMENT = ?";
+            // 预编译
+            pstmt = conn.prepareStatement(query2);
+            // 设置参数，改为新的自增长值
+            pstmt.setLong(1,newAutoIncrement);
+            // 运行 sql
+            pstmt.execute(query2);
+            // 进行提交
+            conn.commit();
+            // 返回老的自增长的值
+            return oldAutoIncrement;
+        } catch (SQLException e){
+            e.printStackTrace();
+        } finally {
+            ResourceUtil.resourceClose(conn,pstmt,rs);
+        }
+    }
+
+    /**
+     * 批量插入日程
      * @param list
      * @return
      */
-    def batchInsertTodo (def list = []) {
+    private def batchInsertTodo (def list = [],Long oldAutoIncrement) {
+        // 老 id 和 新 id 的映射
+        Map oldIdAndNewIdMap = [:];
         try{
             // 开始执行处理的时间 (把日程装入预编译对象)
-            Date  startHandle = new Date ();
+            Date startHandle = new Date ();
+
             // 获取数据库连接
-            conn = sql.getDataSource().getConnection()
-            // 设置自动提交为false
+            conn = sql.getDataSource().getConnection();
+            // 设置自动提交为false，在添加完所有要插入的数据之后，批量进行插入。
             conn.setAutoCommit(false);
             // sql
-            String query = "INSERT INTO todo (version ,  date_created ,  last_updated ,  p_container,  p_display_order,  p_finished_time,  p_is_done,  p_note,  p_parent_id,  p_planed_time,  p_title,  p_user_id,  created_by_client,  receiver_ids,  receiver_names,  sender_id,  is_deleted,  cid,  repeat_tag_id,  sender_todo_id,  team_todo_read,  clock_alert,  kanban_item_id,  is_revoke,  closing_date_finished,  end_date,  start_date,  todo_deploy_id,  is_from_sub_todo,  is_change_date,  is_repeat_todo,  alert_every_day,  check_authority,  dates,  edit_authority,  is_archived,  inboxpcontainer, is_system)  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            String query = "INSERT INTO todo (id,version ,  date_created ,  last_updated ,  p_container,  p_display_order,  p_finished_time,  p_is_done,  p_note,  p_parent_id,  p_planed_time,  p_title,  p_user_id,  created_by_client,  receiver_ids,  receiver_names,  sender_id,  is_deleted,  cid,  repeat_tag_id,  sender_todo_id,  team_todo_read,  clock_alert,  kanban_item_id,  is_revoke,  closing_date_finished,  end_date,  start_date,  todo_deploy_id,  is_from_sub_todo,  is_change_date,  is_repeat_todo,  alert_every_day,  check_authority,  dates,  edit_authority,  is_archived,  inboxpcontainer, is_system)  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
             // 预编译
-            pstmt1 = conn.prepareStatement(query)
-            list.each { it ->
+            pstmt = conn.prepareStatement(query);
+            list.each {Todo it ->
+                // 要插入的日程的 id
+                Long todoId = oldAutoIncrement ++;
                 // 向 预编译对象中添加要插入的日程信息
-                TodoRepeatDs.prepareInsert(it, pstmt1)
+                TodoRepeatDs.prepareInsert(it, pstmt,oldIdAndNewIdMap,todoId)
             }
+
             // 结束处理
             Date  endHandle = new Date ()
-            println('insert prepare complate time : ' + (endHandle.getTime() - startHandle.getTime()))
+            println('insert prepare complete time : ' + (endHandle.getTime() - startHandle.getTime()))
+
             // 执行批量插入
-            pstmt1.executeBatch()
+            pstmt.executeBatch()
             // 提交
             conn.commit();
+
             // 结束插入
             Date endInsert = new Date()
             println('executeBatch:' + (endInsert.getTime() - endHandle.getTime()))
-        } catch(Exception e){
+            // 返回日程老 id 和新 id 的 Map
+            return oldIdAndNewIdMap;
+        } catch(SQLException e){
             e.printStackTrace();
-            return;
         } finally {
-            closeResource();
-            return;
+            ResourceUtil.resourceClose(conn,pstmt,null);
         }
     }
-
-    /**
-     *  批量插入提醒
-     */
-    def batchInsertClock(Map<TodoRepeatTag,Todo> map = [:]){
-        try{
-            // 开始执行处理的时间 (把日程装入预编译对象)
-            Date  startHandle = new Date ();
-            // 获取数据库连接
-            conn = sql.getDataSource().getConnection()
-            // 设置自动提交为false
-            conn.setAutoCommit(false);
-            // 执行遍历操作
-            map.entrySet().each { es ->
-                // 获取到重复标记和日程信息
-                TodoRepeatTag tag = es.key;
-                Todo sourceTodo = es.value;
-                // 设置一个今天的日期
-                Date taskDate = new Date().clearTime();
-                // 查询 tag 所标记的最后一条日程
-                Todo newTodo  = Todo.createCriteria().get{
-                    eq('repeatTagId', id)
-                    sqlRestriction('1=1 order by this_.id desc limit 1')
-                }
-                // 查看 map 中的todo 在今天是否有 clock
-                Clock clock = Clock.findByTaskDateAndTodo(taskDate,sourceTodo);
-                // 有则把clock 给新生成的日程（即最后一条日程）
-                if(clock){
-                    // sql
-                    String query1 = "update clock as c set c.todo_id = ? where c.id = ?";
-                    // 预编译
-                    pstmt1 = conn.prepareStatement(query1);
-                    // 把要更新的数据放入预编译对象中
-                    TodoRepeatDs.prepareInsert(newTodo,clock,pstmt2,"update");
-                    // 查看当前 clock 是否有 alert，有则更新 alert 的时间
-                    List alerts = Alert.findAllByClock(clock);
-                    alerts.each { alert ->
-                        // 处理 alert 的提醒时间
-                    }
-                }
-                // 没有则进行创建操作，把 map 中todo对应的提醒，创建出来一个今天的副本，给最新的日程(即最后一条日程)
-                else {
-                    // sql
-                    String query = "";
-                    // 预编译
-                    pstmt3 = conn.prepareStatement(query)
-                }
-            }
-            // 结束处理
-            Date endHandle = new Date();
-        } catch(Exception e){
-            e.printStackTrace();
-            return;
-        }
-    }
-
-    /**
-     * 用来坚挺重复日程创建百分比。当为 100%　时，证明所有重复日程已经查询完毕
-     * @param size
-     * @param index
-     */
-    private void percent (int size, int index) {
-        int a = size
-        if (index % a  == 0) {
-            println('fetch todo (' + index / a/100 + '%)' )
-        }
-    }
-
-    /**
-     * 数组中的某个日期对应的星期，是否与 targetDate 对应的星期是相同的
-     * @param baseDates
-     * @param targetDate
-     * @return
-     */
-    private Boolean isSameDayInOtherWeek(String[] baseDates,Date targetDate){
-        if(!baseDates || !targetDate){
-            return false
-        }
-        // 获取当前日期的一个日历实体
-        Calendar cTarget = targetDate.toCalendar()
-        for(int i=0;i<baseDates.length;i++){
-            // 获取第一个基本日期 (repeatBaseTime 中的一个)
-            Date baseDate = Date.parse("yyyyMMdd",baseDates[i])
-            if(baseDate == null){
-                continue
-            }
-            // 转换成日历格式
-            Calendar cByI = baseDate.toCalendar()
-            // 如果这个基本日期的星期和 targetDate 对应的星期是相同的，返回true
-            if(cTarget.get(Calendar.DAY_OF_WEEK)==cByI.get(Calendar.DAY_OF_WEEK)){
-                return true
-            }
-        }
-        // 否则
-        return false
-    }
-    /**
-     * 数组中的某一天是否和 targetDate 所对应的那一天是同一天（日期相同）
-     * @param baseDates
-     * @param targetDate
-     * @return
-     */
-    private Boolean isSameDayInOtherMonth(String[] baseDates,Date targetDate){
-        if(!baseDates || !targetDate){
-            return false
-        }
-        Calendar cTarget = targetDate.toCalendar()
-        for(int i=0;i<baseDates.length;i++){
-            Date baseDate = Date.parse("yyyyMMdd",baseDates[i])
-            if(baseDate == null){
-                continue
-            }
-            Calendar cByI = baseDate.toCalendar()
-            if(cTarget.get(Calendar.DAY_OF_MONTH)==cByI.get(Calendar.DAY_OF_MONTH)){
-                return true
-            }
-        }
-        return false
-    }
-    /**
-     * 数组中的某一天是否和targetDate的日是相同的
-     * @param baseDates
-     * @param targetDate
-     * @return
-     */
-    private Boolean isSameDayInOtherYear(String baseDate,Date targetDate){
-        // 参数验证
-        if(!baseDate || !targetDate){
-            return false
-        }
-        // 把 targetDate 转换成日历格式
-        Calendar cTarget = targetDate.toCalendar()
-        // 把 repeatBaseTime 中的日期转换成日期格式
-        Date b = Date.parse("yyyyMMdd",baseDate)
-        if(b == null){
-            return false
-        }
-        // 再次转换成日历格式
-        Calendar cByI = b.toCalendar()
-        // 比较是否是下一年的今天，相同则为 true
-        if(cTarget.get(Calendar.DAY_OF_YEAR)==cByI.get(Calendar.DAY_OF_YEAR)){
-            return true
-        }
-        // 否则
-        return false
-    }
-
-    /**
-     * 谋取某天的月份中最后一天
-     * @param date
-     * @return
-     */
-    private Date getLastDay(Date date){
-        def cal = date.toCalendar()
-        cal.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH)+1, 1, 0, 0, 0)
-        cal.add(Calendar.DAY_OF_MONTH,-1)
-        return cal.getTime()
-    }
+    // ================================ generate end ====================================//
 }
