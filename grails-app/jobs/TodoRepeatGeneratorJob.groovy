@@ -1,4 +1,6 @@
+import com.rishiqing.Alert
 import com.rishiqing.Clock
+import com.rishiqing.data.AlertData
 import com.rishiqing.data.ClockData
 import com.rishiqing.data.TodoRepeatData
 import groovy.sql.Sql
@@ -85,6 +87,7 @@ class TodoRepeatGeneratorJob {
         // 创建结束
         println("----------------- repeat todo job end --------------------");
 
+
         println("----------------- clock job start --------------------");
         ClockData clockData = new ClockData(sql);
         // 查询需要创建的时间
@@ -94,10 +97,17 @@ class TodoRepeatGeneratorJob {
         // 创建结束
         println("----------------- clock job end --------------------");
 
+
         println("----------------- alter job start --------------------");
-
-
+        AlertData alertData = new AlertData(sql);
+        // 查询需要创建的提醒
+        List<Alert> needCreateAlerts = alertData.fetch(oldClockIdAndNewClockIdMap);
+        // 进行提醒的创建操作
+        Integer alertNum = alertData.generator(needCreateAlerts,oldClockIdAndNewClockIdMap);
+        // 输出插入提醒数量
+        println(" insert alert number : ${alertNum}");
         println("----------------- alert job end --------------------");
+
         // 结束
         return;
     }

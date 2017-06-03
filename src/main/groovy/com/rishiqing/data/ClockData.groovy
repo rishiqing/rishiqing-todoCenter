@@ -1,6 +1,5 @@
 package com.rishiqing.data
 
-import com.rishiqing.Alert
 import com.rishiqing.Clock
 import com.rishiqing.ds.ClockDs
 import com.rishiqing.util.ResourceUtil
@@ -13,7 +12,7 @@ import java.sql.SQLException
 
 /**
  * Created by Thinkpad on 2017/6/2.
- * 时间的查询方法
+ * 时间的查询及处理方法
  */
 class ClockData {
 
@@ -35,8 +34,10 @@ class ClockData {
     }
 
     // ================================  fetch job ======================================= //
+
     /**
      * 查询
+     * @param oldTodoIdAndNewTodoIdMap 日程新旧 id 的映射
      * @return
      */
     def fetch(Map<Long,Long> oldTodoIdAndNewTodoIdMap) {
@@ -91,9 +92,9 @@ class ClockData {
     // ============================ generator job start ================================//
 
     /**
-     * 执行
-     * @param needCreateClock
-     * @param oldTodoIdAndNewTodoIdMap
+     * 执行创建操作
+     * @param needCreateClock 需要创建的时间的列表
+     * @param oldTodoIdAndNewTodoIdMap 日程新旧 id 组成的映射
      */
     def generator(List<Clock> needCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap){
         // 处理自增长值并且获取到原来的自增长值
@@ -104,6 +105,11 @@ class ClockData {
         return oldClockIdAndNewClockId;
     }
 
+    /**
+     * 处理时间的id自增长
+     * @param needCreateClock 需要创建的时间的列表
+     * @return
+     */
     def handleClockAutoIncrement(List needCreateClock){
         try{
             // 获取数据库连接对象
@@ -141,13 +147,16 @@ class ClockData {
     }
 
     /**
-     *  批量插入提醒
+     * 批量插入提醒
+     * @param needCreateClock 需要创建的时间
+     * @param oldTodoIdAndNewTodoIdMap 新旧日程 id 组成的映射
+     * @param oldAutoIncrement 原来自增长的值
+     * @return oldClockIdAndNewClockIdMap 新旧提醒的映射
      */
     private def batchInsertClock(List<Clock> needCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap,Long oldAutoIncrement){
         // 新旧 clock id　组成的Map
         Map<Long,Long> oldClockIdAndNewClockIdMap = [:];
         try{
-
             // 开始执行处理的时间 (把日程装入预编译对象)
             Date startHandle = new Date ();
 
@@ -156,7 +165,7 @@ class ClockData {
             // 设置自动提交为false，在添加完所有要插入的数据之后，批量进行插入。
             conn.setAutoCommit(false);
             // sql
-            String query = "INSERT INTO `clock` ( id, clock_user_id, date_created, end_time, is_deleted, start_time, task_date, todo_id, always_alert ) VALUES (?,?,?,?,?,?,?,?,?);";
+            String query = "INSERT INTO `clock` ( `id`, `clock_user_id`, `date_created`, `end_time`, `is_deleted`, `start_time`, `task_date`, `todo_id`, `always_alert` ) VALUES (?,?,?,?,?,?,?,?,?);";
             // 预编译
             pstmt = conn.prepareStatement(query);
             // 数据组装

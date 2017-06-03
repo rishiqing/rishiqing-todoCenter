@@ -27,8 +27,8 @@ class ClockDs {
         map.clockUserId         = clock.clockUserId;
         map.dateCreated         = timestampNow;
         map.endTime             = clock.endTime;
-        map.startTime           = clock.startTime;
         map.isDeleted           = false;
+        map.startTime           = clock.startTime;
         map.taskDate            = timestampToday;
         map.todoId              = oldTodoIdAndNewTodoIdMap.get(clock.todoId);
         map.alwaysAlert         = true;
