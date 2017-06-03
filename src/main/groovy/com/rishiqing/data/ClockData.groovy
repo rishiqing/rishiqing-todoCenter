@@ -2,6 +2,7 @@ package com.rishiqing.data
 
 import com.rishiqing.Alert
 import com.rishiqing.Clock
+import com.rishiqing.ds.ClockDs
 import com.rishiqing.util.ResourceUtil
 import groovy.sql.Sql
 
@@ -55,6 +56,7 @@ class ClockData {
                 and {
                     eq("todoId", oldTodoId);
                     eq("taskDate", searchDate);
+                    eq("isDeleted",false);
                 }
             }
             def clock = null;
@@ -65,6 +67,7 @@ class ClockData {
                     and {
                         eq("todoId", oldTodoId);
                         eq("alwaysAlert", true);
+                        eq("isDelete",false);
                     }
                     sqlRestriction("1=1 order by this_.id desc limit 1");
                 }
@@ -87,16 +90,18 @@ class ClockData {
 
     // ============================ generator job start ================================//
 
+    /**
+     * 执行
+     * @param needCreateClock
+     * @param oldTodoIdAndNewTodoIdMap
+     */
     def generator(List<Clock> needCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap){
         // 处理自增长值并且获取到原来的自增长值
         Long oldAutoIncrement = handleClockAutoIncrement(needCreateClock);
-
-
-
         // 执行创建操作
-        needCreateClock.each { clock ->
-
-        }
+        Map<Long,Long> oldClockIdAndNewClockId = batchInsertClock(needCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
+        // 返回时间的 新旧 ID 映射
+        return oldClockIdAndNewClockId;
     }
 
     def handleClockAutoIncrement(List needCreateClock){
@@ -112,11 +117,11 @@ class ClockData {
             // 获取结果集
             rs = pstmt.executeQuery();
             // 获取时间的数量
-            Long oldAutoIncrement = rs.getLong(1);
+            Long oldAutoIncrement = rs.getLong(1) + 1;
             // 获取要创建的 clock 的数量
             Long size = needCreateClock.size();
             // 计算新的自增长的值
-            Long newAutoIncrement = oldAutoIncrement + size + 1;
+            Long newAutoIncrement = oldAutoIncrement + size
             // 更改自增长的值
             String query2 = "alter table `clock` AUTO_INCREMENT = ?";
             // 预编译
@@ -138,24 +143,47 @@ class ClockData {
     /**
      *  批量插入提醒
      */
-    private static def batchInsertClock(){
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
+    private def batchInsertClock(List<Clock> needCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap,Long oldAutoIncrement){
+        // 新旧 clock id　组成的Map
+        Map<Long,Long> oldClockIdAndNewClockIdMap = [:];
         try{
 
-        } catch(Exception e){
+            // 开始执行处理的时间 (把日程装入预编译对象)
+            Date startHandle = new Date ();
+
+            // 获取数据库连接
+            conn = sql.getDataSource().getConnection();
+            // 设置自动提交为false，在添加完所有要插入的数据之后，批量进行插入。
+            conn.setAutoCommit(false);
+            // sql
+            String query = "INSERT INTO `clock` ( id, clock_user_id, date_created, end_time, is_deleted, start_time, task_date, todo_id, always_alert ) VALUES (?,?,?,?,?,?,?,?,?);";
+            // 预编译
+            pstmt = conn.prepareStatement(query);
+            // 数据组装
+            needCreateClock.each { clock ->
+                ClockDs.prepareInsert(clock,pstmt,oldClockIdAndNewClockIdMap,oldAutoIncrement,oldTodoIdAndNewTodoIdMap);
+                oldAutoIncrement ++ ;
+            }
+
+            // 结束处理
+            Date  endHandle = new Date ()
+            println('insert prepare complete time : ' + (endHandle.getTime() - startHandle.getTime()))
+
+            // 执行批量插入操作
+            pstmt.executeBatch();
+            // 提交
+            conn.commit();
+
+            // 结束插入
+            Date endInsert = new Date()
+            println('executeBatch:' + (endInsert.getTime() - endHandle.getTime()))
+
+            // 返回clock 新旧 id 的映射
+            return oldClockIdAndNewClockIdMap;
+        } catch(SQLException e){
             e.printStackTrace();
         } finally {
-            if(conn){
-                conn.close();
-            }
-            if(pstmt){
-                pstmt.close();
-            }
-            if(rs){
-                rs.close();
-            }
+            ResourceUtil.resourceClose(conn,pstmt,rs);
         }
     }
 

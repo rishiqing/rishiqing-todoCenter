@@ -176,11 +176,11 @@ class TodoRepeatData {
             // 执行查询，获取结果集
             rs = pstmt.executeQuery();
             // 获取结果集
-            Long oldAutoIncrement = rs.getLong(1);
+            Long oldAutoIncrement = rs.getLong(1) + 1;
             // 获取要插入的日程的数量
             Long size = todoResultList.size();
             // 获取新的自增长值 = 老的自增长 + 插入日程的长度 + 1;
-            Long newAutoIncrement = oldAutoIncrement + size + 1;
+            Long newAutoIncrement = oldAutoIncrement + size;
             // 更新表
             String query2 = "alter table `todo` AUTO_INCREMENT = ?";
             // 预编译
@@ -221,10 +221,9 @@ class TodoRepeatData {
             // 预编译
             pstmt = conn.prepareStatement(query);
             list.each {Todo it ->
-                // 要插入的日程的 id
-                Long todoId = oldAutoIncrement ++;
                 // 向 预编译对象中添加要插入的日程信息
-                TodoRepeatDs.prepareInsert(it, pstmt,oldTodoIdAndNewTodoIdMap,todoId)
+                TodoRepeatDs.prepareInsert(it, pstmt,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
+                oldAutoIncrement ++ ;
             }
 
             // 结束处理

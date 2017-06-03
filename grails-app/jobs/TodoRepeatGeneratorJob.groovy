@@ -91,7 +91,7 @@ class TodoRepeatGeneratorJob {
         List<Clock> needCreateClock = clockData.fetch(oldTodoIdAndNewTodoIdMap);
         // 进行时间的创建操作
         Map<Long,Long> oldClockIdAndNewClockIdMap = clockData.generator(needCreateClock,oldTodoIdAndNewTodoIdMap);
-
+        // 创建结束
         println("----------------- clock job end --------------------");
 
         println("----------------- alter job start --------------------");

@@ -3,12 +3,14 @@ package com.rishiqing.ds
 import com.rishiqing.Clock
 import com.rishiqing.Todo
 import com.rishiqing.TodoDeploy
+import com.rishiqing.util.CommonUtil
 
 import java.sql.PreparedStatement
 import java.sql.Timestamp
 
 /**
  * Created by solax on 2017-1-10.
+ * 日程数据组装
  */
 class TodoRepeatDs {
     /**
@@ -83,22 +85,7 @@ class TodoRepeatDs {
         int i = 1;
         // 遍历 todoMap ,转换给定的值的类型，把类型转换成可以插入数据库的格式，并存入预编译对象
         todoMap.each { key, value ->
-            if (value instanceof  Timestamp) { // 转时间戳
-                // 设置第 i 个位置的值为时间戳格式
-                pstmt.setTimestamp(i, value);
-            } else if (value instanceof  Integer) {// 转 int
-                // 设置第 i 个位置的值为int
-                pstmt.setInt(i, value);
-            } else if (value instanceof  Long) { // 转 long
-                // 设置第 i 个位置的值为long
-                pstmt.setLong(i, value);
-            } else if (value instanceof  Boolean) {  // 转 boolean
-                // 设置第 i 个位置的值为boolean
-                pstmt.setBoolean(i, value);
-            }else {
-                // 设置第 i 个位置的值为 String 格式
-                pstmt.setString(i, value.toString());// 转 字符串
-            }
+            CommonUtil.setPstmtParams(value,pstmt,i);
             i ++;
         }
         // 将设置好的一组数据添加到 预编译对象中

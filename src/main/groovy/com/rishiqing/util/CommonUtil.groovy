@@ -3,6 +3,9 @@ package com.rishiqing.util
 import com.rishiqing.Todo
 import com.rishiqing.TodoRepeatTag
 
+import java.sql.PreparedStatement
+import java.sql.Timestamp
+
 /**
  * Created by Thinkpad on 2017/6/2.
  * 公共工具类
@@ -194,5 +197,33 @@ class CommonUtil {
         //如果重复里已被删除的日期里包含了date，则不生成
         if(it.deletedDate && it.deletedDate.split(",").contains(date.format("yyyyMMdd"))) return false
         return true
+    }
+
+    /**
+     * 数据装入预处理对象
+     * @param value 值
+     * @param pstmt 预编译语言对象
+     * @param i 装入位置
+     * @return
+     */
+    public static def setPstmtParams(def value,PreparedStatement pstmt,Integer i){
+
+        if (value instanceof  Timestamp) { // 转时间戳
+            // 设置第 i 个位置的值为时间戳格式
+            pstmt.setTimestamp(i, value);
+        } else if (value instanceof  Integer) {// 转 int
+            // 设置第 i 个位置的值为int
+            pstmt.setInt(i, value);
+        } else if (value instanceof  Long) { // 转 long
+            // 设置第 i 个位置的值为long
+            pstmt.setLong(i, value);
+        } else if (value instanceof  Boolean) {  // 转 boolean
+            // 设置第 i 个位置的值为boolean
+            pstmt.setBoolean(i, value);
+        }else {
+            // 设置第 i 个位置的值为 String 格式
+            pstmt.setString(i, value.toString());// 转 字符串
+        }
+
     }
 }
