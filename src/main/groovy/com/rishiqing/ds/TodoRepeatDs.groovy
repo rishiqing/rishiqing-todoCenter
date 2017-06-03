@@ -10,6 +10,7 @@ import java.sql.Timestamp
 
 /**
  * Created by solax on 2017-1-10.
+ * Update by codingR on 2017-06-03.
  * 日程数据组装
  */
 class TodoRepeatDs {
@@ -93,26 +94,26 @@ class TodoRepeatDs {
     }
 
 
-    /**
-     * map转string
-     * @return
-     */
-    static  String toInsertString (Todo todo) {
-        int i = 0
-        StringBuffer sql = new StringBuffer()
-        def todoMap = toSqlMap(todo)
-        todoMap.each { key, value->
-            sql .append(parse(value, i))
-            i ++
-        }
-        return '(' +  sql + ')'
-    }
-
-    static  String parse (def object) {
-        if  (!object || object == 'NULL' ) {
-            return null
-        } else {
-            return object
-        }
-    }
+//    /**
+//     * map转string
+//     * @return
+//     */
+//    static  String toInsertString (Todo todo) {
+//        int i = 0
+//        StringBuffer sql = new StringBuffer()
+//        def todoMap = toSqlMap(todo)
+//        todoMap.each { key, value->
+//            sql .append(parse(value, i))
+//            i ++
+//        }
+//        return '(' +  sql + ')'
+//    }
+//
+//    static  String parse (def object) {
+//        if  (!object || object == 'NULL' ) {
+//            return null
+//        } else {
+//            return object
+//        }
+//    }
 }

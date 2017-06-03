@@ -5,11 +5,12 @@ import com.rishiqing.data.ClockData
 import com.rishiqing.data.TodoRepeatData
 import groovy.sql.Sql
 
+import javax.sql.DataSource
+
 /**
  * Created by solax on 2017-1-5.
- *
+ * Update by codingR on 2017-06-03
  * 重复日程生成器，每天 00:05 后开始生成日程
- *
  */
 class TodoRepeatGeneratorJob {
 
@@ -59,7 +60,7 @@ class TodoRepeatGeneratorJob {
 //    }
 
     /** 注入 */
-    def dataSource;
+    DataSource dataSource;
     /** 当前时间为空 */
     static Date currentDate = null;
     /** 触发器 */
@@ -74,7 +75,7 @@ class TodoRepeatGeneratorJob {
         // 设置当前运行时间
         currentDate = new Date();
         // 创建 sql 对象
-        Sql sql  = new Sql(dataSource);
+        Sql sql  = new Sql(dataSource)
 
         // 开始进行生成操作
         println ("----------------- repeat todo job start --------------------");

@@ -14,7 +14,7 @@ import java.sql.SQLException;
 
 /**
  * Created by solax on 2017-1-6.
- *
+ * Update by codingR on 2017-06-03.
  */
 class TodoRepeatData {
 
@@ -63,7 +63,7 @@ class TodoRepeatData {
         // 获取list的长度
         Integer listSize = repeatTagList ? repeatTagList.size() : 0;
         // 重复标记的数量，每个标记对应一个重复的日程。
-        println('repeatTagList size : ' + listSize);
+        println("repeatTagList size : " + listSize);
 
         // 阀值，用来计算查询结果的百分比使用
         Integer i = 0;
