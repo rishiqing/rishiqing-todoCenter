@@ -25,6 +25,56 @@ class TodoRepeatGeneratorJob {
         // 使用 cron 表达式进行控制：每天凌晨 00:05 进行生成
         cron(name: "todoSendJob", cronExpression: "0 5 0 * * ?");
     }
+    /*
+     * 关于 triggers 的说明：
+     *
+     *      class MyJob {
+     *          static triggers = {
+     *              // 定义一个触发器，name是 mySimpleTrigger，在服务器启动 60000 mill 后开始运行，并每隔 1000 mill 运行一次
+     *              // 可以不给定 startDelay 和 repeatInterval ：
+     *              // 如果这两个属性不指定，则使用默认值（repeatInterval为1分钟，startDelay为30秒）
+     *              simple name: 'mySimpleTrigger', startDelay: 60000, repeatInterval: 1000
+     *          }
+     *          // 触发器会默认每隔  1000  mill 运行一次 execute 方法
+     *          def execute(){
+     *              print "Job run!"
+     *          }
+     *      }
+     *
+     * 通过 cron 表达式调度任务:
+     *
+     *      class MyJob  {
+     *            static triggers = {
+     *                // 每天 6 点调度任务
+     *                cron name: 'myTrigger', cronExpression: "0 0 6 * * ?"
+     *            }
+     *            def execute(){ print "Job run!" }
+     *       }
+     *
+     * 关于 cron 表达式:
+     *
+     * 具体可见博客:
+     * @link http://www.cnblogs.com/junrong624/p/4239517.html#undefined
+     * cron 表达式在线生成网址：
+     * @link http://cron.qqe2.com/
+     *
+     * 两种格式：
+     *      秒       分       时   月中的哪一天   月     周中的哪一天   年
+     *      Seconds Minutes Hours DayofMonth   Month  DayofWeek   Year 或
+     *      Seconds Minutes Hours DayofMonth   Month  DayofWeek
+     *
+     * 几个例子：
+     * 每隔5秒执行一次：0/5 * * * * ?  （第一个 0 也可以使用 * 表示，意思相同）
+     * 每隔1分钟执行一次：0 0/1 * * * ?
+     * 每天23点执行一次：0 0 23 * * ?
+     * 每天凌晨1点执行一次：0 0 1 * * ?
+     * 每月1号凌晨1点执行一次：0 0 1 1 * ?
+     * 每月最后一天23点执行一次：0 0 23 L * ?
+     * 每周星期天凌晨1点实行一次：0 0 1 ? * L
+     * 在26分、29分、33分执行一次：0 26,29,33 * * * ?
+     * 每天的0点、13点、18点、21点都执行一次：0 0 0,13,18,21 * * ?
+     *
+     * */
 
     def execute(){
         // 设置当前运行时间
