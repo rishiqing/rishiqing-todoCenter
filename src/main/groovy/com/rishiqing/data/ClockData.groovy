@@ -98,10 +98,13 @@ class ClockData {
      * @param oldTodoIdAndNewTodoIdMap 日程新旧 id 组成的映射
      */
     def generator(List<Clock> needCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap){
-        // 处理自增长值并且获取到原来的自增长值
-        Long oldAutoIncrement = handleClockAutoIncrement(needCreateClock);
-        // 执行创建操作
-        Map<Long,Long> oldClockIdAndNewClockId = batchInsertClock(needCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
+        Map<Long,Long> oldClockIdAndNewClockId = [:];
+        if(needCreateClock.size()>0){
+            // 处理自增长值并且获取到原来的自增长值
+            Long oldAutoIncrement = handleClockAutoIncrement(needCreateClock);
+            // 执行创建操作
+            oldClockIdAndNewClockId = batchInsertClock(needCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
+        }
         // 返回时间的 新旧 ID 映射
         return oldClockIdAndNewClockId;
     }

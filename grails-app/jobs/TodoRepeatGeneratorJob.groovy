@@ -20,14 +20,14 @@ class TodoRepeatGeneratorJob {
     static Date currentDate = null;
     /** 触发器 */
     static triggers = {
-        // 服务器启动 1 分钟后开始运行
-        simple name: 'mySimpleTrigger', startDelay: 60000;
+        println "触发器启动";
         // 使用 cron 表达式进行控制：每天凌晨 00:05 进行生成
-        cron(name: "todoSendJob", cronExpression: "0 5 0 * * ?");
+        cron name: "repeatTodoGenerator",startDelay: 60000, cronExpression: "0 5 0 * * ? *" ;
     }
     /*
      * 关于 triggers 的说明：
-     *
+     * 具体可见博客
+     * @link http://blog.csdn.net/wangyongwyk/article/details/5534966
      *      class MyJob {
      *          static triggers = {
      *              // 定义一个触发器，name是 mySimpleTrigger，在服务器启动 60000 mill 后开始运行，并每隔 1000 mill 运行一次
@@ -50,6 +50,8 @@ class TodoRepeatGeneratorJob {
      *            }
      *            def execute(){ print "Job run!" }
      *       }
+     *
+     * 注意！simple 和 cron 不能一起使用，如果一起使用，就会查询两次。
      *
      * 关于 cron 表达式:
      *
@@ -94,27 +96,28 @@ class TodoRepeatGeneratorJob {
         println("----------------- repeat todo job end --------------------");
 
 
-        println("----------------- clock job start --------------------");
-        ClockData clockData = new ClockData(sql);
-        // 查询需要创建的时间
-        List<Clock> needCreateClock = clockData.fetch(oldTodoIdAndNewTodoIdMap);
-        // 进行时间的创建操作
-        Map<Long,Long> oldClockIdAndNewClockIdMap = clockData.generator(needCreateClock,oldTodoIdAndNewTodoIdMap);
-        // 创建结束
-        println("----------------- clock job end --------------------");
+        Map<Long,Long> oldClockIdAndNewClockIdMap = [:];
+        if(oldTodoIdAndNewTodoIdMap.size()>0){
+            println("----------------- clock job start --------------------");
+            ClockData clockData = new ClockData(sql);
+            // 查询需要创建的时间
+            List<Clock> needCreateClock = clockData.fetch(oldTodoIdAndNewTodoIdMap);
+            // 进行时间的创建操作
+            oldClockIdAndNewClockIdMap = clockData.generator(needCreateClock,oldTodoIdAndNewTodoIdMap);
+            // 创建结束
+            println("----------------- clock job end --------------------");
+        }
 
-
-        println("----------------- alter job start --------------------");
-        AlertData alertData = new AlertData(sql);
-        // 查询需要创建的提醒
-        List<Alert> needCreateAlerts = alertData.fetch(oldClockIdAndNewClockIdMap);
-        // 进行提醒的创建操作
-        Integer alertNum = alertData.generator(needCreateAlerts,oldClockIdAndNewClockIdMap);
-        // 输出插入提醒数量
-        println("插入 Alert 总数 : ${alertNum}");
-        println("----------------- alert job end --------------------");
-
-        // 结束
-        return;
+        if(oldClockIdAndNewClockIdMap.size()>0){
+            println("----------------- alter job start --------------------");
+            AlertData alertData = new AlertData(sql);
+            // 查询需要创建的提醒
+            List<Alert> needCreateAlerts = alertData.fetch(oldClockIdAndNewClockIdMap);
+            // 进行提醒的创建操作
+            Integer alertNum = alertData.generator(needCreateAlerts,oldClockIdAndNewClockIdMap);
+            // 输出插入提醒数量
+            println("插入 Alert 总数 : ${alertNum}");
+            println("----------------- alert job end --------------------");
+        }
     }
 }

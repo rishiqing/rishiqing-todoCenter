@@ -141,20 +141,22 @@ class TodoRepeatData {
         // 需要进行重复日程创建的日程的数量
         println('需要生成的重复日程数量 : ' + todoResultList.size())
 
-        // 进行重置 id 自增长的操作，把当前需要创建重复的日程的空间预留出来
-        Long oldAutoIncrement = handleTodoAutoIncrement(todoResultList);
+        Map<Long,Long> oldTodoIdAndNewTodoIdMap = [:];
+        if(todoResultList.size() > 0){
+            // 进行重置 id 自增长的操作，把当前需要创建重复的日程的空间预留出来
+            Long oldAutoIncrement = handleTodoAutoIncrement(todoResultList);
 
-        // 执行日程批量插入，返回日程新老 id 映射。
-        Map oldTodoIdAndNewTodoIdMap = batchInsertTodo(todoResultList,oldAutoIncrement);
+            // 执行日程批量插入，返回日程新老 id 映射。
+            oldTodoIdAndNewTodoIdMap = batchInsertTodo(todoResultList,oldAutoIncrement);
 
-        // 打开重复日程的创建开关 (isRepeatTodo)，当 isRepeatTod0 = 1是，第一天的日程将不显示延期。
-        String todoIds = todoIdsSb.toString();
-        if(todoIds && !"".equals(todoIds)){
-            println "todo update isRepeatTodo start"
-            sql.executeUpdate("UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")")
-            println "todo update isRepeatTodo end"
+            // 打开重复日程的创建开关 (isRepeatTodo)，当 isRepeatTod0 = 1是，第一天的日程将不显示延期。
+            String todoIds = todoIdsSb.toString();
+            if(todoIds && !"".equals(todoIds)){
+                println "todo update isRepeatTodo start"
+                sql.executeUpdate("UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")")
+                println "todo update isRepeatTodo end"
+            }
         }
-        // 返回日程新老 Id 映射
         return oldTodoIdAndNewTodoIdMap;
     }
 
@@ -179,7 +181,11 @@ class TodoRepeatData {
             // 执行查询，获取结果集
             rs = pstmt.executeQuery();
             // 获取结果集
-            Long oldAutoIncrement = rs.getLong(1) + 1;
+            Long oldAutoIncrement = -1;
+            // 取值
+            while(rs.next()){
+                oldAutoIncrement = rs.getLong(1) + 1;
+            }
             // 获取要插入的日程的数量
             Long size = todoResultList.size();
             // 获取新的自增长值 = 老的自增长 + 插入日程的长度;
@@ -191,7 +197,7 @@ class TodoRepeatData {
             // 设置参数，改为新的自增长值
             pstmt.setLong(1,newAutoIncrement);
             // 运行 sql
-            pstmt.execute(query2);
+            pstmt.execute();
             // 进行提交
             conn.commit();
 
