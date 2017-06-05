@@ -58,12 +58,12 @@ class TodoRepeatData {
 
         Date endSearch = new Date();  // 用来记录重复日程标记结束查询的时间
         // 搜索时长
-        println("search repeatTag time: " + (endSearch.getTime() - startSearch. getTime()));
+        println("检索日程重复标记花费时间（ms）: " + (endSearch.getTime() - startSearch. getTime()));
 
         // 获取list的长度
         Integer listSize = repeatTagList ? repeatTagList.size() : 0;
         // 重复标记的数量，每个标记对应一个重复的日程。
-        println("repeatTagList size : " + listSize);
+        println("查询到的日程重复标记数量 : " + listSize);
 
         // 阀值，用来计算查询结果的百分比使用
         Integer i = 0;
@@ -88,7 +88,7 @@ class TodoRepeatData {
                     sqlRestriction('1=1 order by this_.id desc limit 1');
                 }
 
-                // 如果日程存在，那么组成 map 添加到需要创建的日程列表里。
+                // 如果日程存在，组成基本信息 map 添加到需要创建的日程列表里。
                 if(todo){
                     // 把基本信息装入 map ，添加到需要创建的日程的列表中
                     Map map = [todo: todo,repeatTag: repeatTag,date: searchDate];
@@ -106,7 +106,7 @@ class TodoRepeatData {
         }
         // 完成所有需要创建的重复日程的查询
         Date endFetch = new Date();
-        println("fetch finish : " + (endFetch.getTime() - endSearch.getTime()));
+        println("检索日程完成，花费（ms）: " + (endFetch.getTime() - endSearch.getTime()));
         return needCreateTodos;
     }
 
@@ -121,10 +121,10 @@ class TodoRepeatData {
     def generator (def list) {
         // 需要创建的日程结果
         def todoResultList = [];
-
+        // 用于记录日程的 id 组成的字符串，以 “,” 分割
         StringBuffer todoIdsSb = new StringBuffer()
         list.each { it ->
-            // 经过各种判断，如果确定需要保存到数据库，  则存入resultList中
+            // 获取日程
             Todo todo = it.todo;
             // 获取日程重复标记
             TodoRepeatTag tag = it.repeatTag;
@@ -139,9 +139,9 @@ class TodoRepeatData {
             }
         }
         // 需要进行重复日程创建的日程的数量
-        println('todo insert list size: ' + todoResultList.size())
+        println('需要生成的重复日程数量 : ' + todoResultList.size())
 
-        // 进行重置 id 值的操作，把当前需要创建重复的日程的空间预留出来
+        // 进行重置 id 自增长的操作，把当前需要创建重复的日程的空间预留出来
         Long oldAutoIncrement = handleTodoAutoIncrement(todoResultList);
 
         // 执行日程批量插入，返回日程新老 id 映射。
@@ -165,6 +165,9 @@ class TodoRepeatData {
      */
     private def handleTodoAutoIncrement(List todoResultList){
         try{
+
+            println "处理Todo id 自增长开始";
+
             // 获取数据库连接
             conn = sql.getDataSource().getConnection();
             // 设置自动提交为false，在添加完所有要插入的数据之后，批量进行插入。
@@ -179,7 +182,7 @@ class TodoRepeatData {
             Long oldAutoIncrement = rs.getLong(1) + 1;
             // 获取要插入的日程的数量
             Long size = todoResultList.size();
-            // 获取新的自增长值 = 老的自增长 + 插入日程的长度 + 1;
+            // 获取新的自增长值 = 老的自增长 + 插入日程的长度;
             Long newAutoIncrement = oldAutoIncrement + size;
             // 更新表
             String query2 = "alter table `todo` AUTO_INCREMENT = ?";
@@ -191,6 +194,9 @@ class TodoRepeatData {
             pstmt.execute(query2);
             // 进行提交
             conn.commit();
+
+            println "处理Todo id 自增长结束";
+
             // 返回老的自增长的值
             return oldAutoIncrement;
         } catch (SQLException e){
@@ -228,7 +234,7 @@ class TodoRepeatData {
 
             // 结束处理
             Date  endHandle = new Date ()
-            println('insert prepare complete time : ' + (endHandle.getTime() - startHandle.getTime()))
+            println('日程插入预处理时间（ms） : ' + (endHandle.getTime() - startHandle.getTime()))
 
             // 执行批量插入
             pstmt.executeBatch()
@@ -237,7 +243,7 @@ class TodoRepeatData {
 
             // 结束插入
             Date endInsert = new Date()
-            println('executeBatch:' + (endInsert.getTime() - endHandle.getTime()))
+            println('执行插入处理时间（ms）:' + (endInsert.getTime() - endHandle.getTime()))
             // 返回日程老 id 和新 id 的 Map
             return oldTodoIdAndNewTodoIdMap;
         } catch(SQLException e){

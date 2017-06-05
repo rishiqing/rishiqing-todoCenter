@@ -78,9 +78,9 @@ class TodoRepeatDs {
      * @param pstmt
      */
     static void prepareInsert(Todo todo, PreparedStatement pstmt,Map oldIdAndNewIdMap,Long todoId) {
-        // 把日程老 id 和 新 id 装入映射
+        // 把日程老 id 和 新 id 装入 Map
         oldIdAndNewIdMap.put(todo.id,todoId);
-        // 把 todo转换为 map，此 map 负责向预编译语言对象中录入数据
+        // 把 todo转换为 map，此 map 负责向预处理对象中录入数据
         def todoMap = toSqlMap(todo,todoId);
         // 设定阀值，用来指定插入位置，比如 todo的第一个参数为 version 那么当 i = 1 时，取第一个值配置到预编译语言对象中
         int i = 1;

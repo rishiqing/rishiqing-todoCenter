@@ -26,7 +26,7 @@ class AlertDs {
 
         // 组装
         map.alertTime       = getAlertTime(newClock.taskDate,newClock.startTime,newClock.endTime,alert.schedule);
-        map.clockId         = alert.clockId;
+        map.clockId         = newClock.id;
         map.dateCreated     = timestampNow;
         map.isUserDefined   = alert.isUserDefined
         map.schedule        = alert.schedule;

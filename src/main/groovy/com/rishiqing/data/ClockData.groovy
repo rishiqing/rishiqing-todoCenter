@@ -50,7 +50,7 @@ class ClockData {
 
         // 在进行检索操作时使用的日期
         Date searchDate = new Date().clearTime();
-        // 遍历日程新旧id 的Map
+        // 遍历日程新旧id 的Map，通过日程 id 值来查询其下面的提醒
         oldTodoIdAndNewTodoIdMap.entrySet().each { oldTodoId, newTodoId ->
             // 查询此日程在查询的日期下是否被安排了时间和提醒
             def currentClock = Clock.createCriteria().get {
@@ -61,7 +61,7 @@ class ClockData {
                 }
             }
             def clock = null;
-            // 如果没有安排时间和提醒
+            // 如果没有安排时间和提醒，则需要进行生成处理
             if (!currentClock) {
                 // 获取这个日程最后一条提醒类型是“一直提醒”的时间，获取到
                 clock = (Clock) Clock.createCriteria().get {
@@ -74,13 +74,14 @@ class ClockData {
                 }
                 // 如果可以查询到
                 if (clock) {
+                    // 添加到需要创建的提醒队列中
                     needCreateClock.add(clock);
                 }
             }
         }
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("fetch finish : " + (startFetchDate.getTime() - endFetchDate.getTime()));
+        println("Clock 查询结束耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
 
         // 返回查询结果
         return needCreateClock;
@@ -112,11 +113,14 @@ class ClockData {
      */
     def handleClockAutoIncrement(List needCreateClock){
         try{
+
+            println "处理Clock id 自增长开始";
+
             // 获取数据库连接对象
             conn = sql.getDataSource().getConnection();
             // 关闭自动提交
             conn.setAutoCommit(false);
-            // 查询数据库中时间的数量
+            // 查询数据库中时间的数量(id 最大值)
             String query1 = "select max(id) from `clock` for update";
             // 预编译
             pstmt = conn.prepareStatement(query1);
@@ -136,6 +140,11 @@ class ClockData {
             pstmt.setLong(1,newAutoIncrement);
             // 执行
             pstmt.execute();
+            // 提交
+            conn.commit();
+
+            println "处理Clock id 自增长结束";
+
             // 返回自增长的值
             return oldAutoIncrement;
 
@@ -176,7 +185,7 @@ class ClockData {
 
             // 结束处理
             Date  endHandle = new Date ()
-            println('insert prepare complete time : ' + (endHandle.getTime() - startHandle.getTime()))
+            println('Clock插入预处理时间（ms） : ' + (endHandle.getTime() - startHandle.getTime()))
 
             // 执行批量插入操作
             pstmt.executeBatch();
@@ -185,7 +194,7 @@ class ClockData {
 
             // 结束插入
             Date endInsert = new Date()
-            println('executeBatch:' + (endInsert.getTime() - endHandle.getTime()))
+            println('Clock 执行插入处理时间（ms） :' + (endInsert.getTime() - endHandle.getTime()))
 
             // 返回clock 新旧 id 的映射
             return oldClockIdAndNewClockIdMap;

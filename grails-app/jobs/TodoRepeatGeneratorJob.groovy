@@ -14,51 +14,6 @@ import javax.sql.DataSource
  */
 class TodoRepeatGeneratorJob {
 
-//    def dataSource
-//
-//    static boolean isRunning = false
-//
-//    static Date currentDate = new Date ()
-//
-//    static triggers = {
-//        simple startDelay:1000*20, repeatInterval: 1000 * 60
-//    }
-//
-//    def execute () {
-//        // 运行条件：没有正在运行 + 新的一天
-//        if (isRunning) {
-//            return
-//        } else {
-//            println('repeat job execute...')
-//            if (!this.isNewDay()) {
-//                return
-//            }
-//        }
-//        println('----------------- repeat  job start --------------------')
-//        isRunning = true
-//        Sql sql  = new Sql(dataSource)
-//        TodoRepeatData todoRepeatData = new TodoRepeatData(sql)
-//        def list = todoRepeatData.fetch()
-//        todoRepeatData.generator(list)
-//        println('----------------- repeat  job end --------------------')
-//        // 初始化状态数据
-//        currentDate = new Date()
-//        isRunning = false
-//    }
-//
-//
-//    private boolean isNewDay () {
-//        // 新的日期
-//        Calendar calendar = Calendar.getInstance()
-//        int newDay = calendar.get(Calendar.DAY_OF_YEAR)
-//        // 旧的日期
-//        Calendar oldCalendar = Calendar.getInstance()
-//        oldCalendar.setTime(currentDate)
-//        int oldDay = oldCalendar.get(Calendar.DAY_OF_YEAR)
-//        if (oldDay != newDay) return true
-//        return false
-//    }
-
     /** 注入 */
     DataSource dataSource;
     /** 当前时间为空 */
@@ -75,7 +30,7 @@ class TodoRepeatGeneratorJob {
         // 设置当前运行时间
         currentDate = new Date();
         // 创建 sql 对象
-        Sql sql  = new Sql(dataSource)
+        Sql sql  = new Sql(dataSource);
 
         // 开始进行生成操作
         println ("----------------- repeat todo job start --------------------");
@@ -106,7 +61,7 @@ class TodoRepeatGeneratorJob {
         // 进行提醒的创建操作
         Integer alertNum = alertData.generator(needCreateAlerts,oldClockIdAndNewClockIdMap);
         // 输出插入提醒数量
-        println(" insert alert number : ${alertNum}");
+        println("插入 Alert 总数 : ${alertNum}");
         println("----------------- alert job end --------------------");
 
         // 结束

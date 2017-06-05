@@ -51,7 +51,7 @@ class AlertData {
 
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("fetch finish : " + (startFetchDate.getTime() - endFetchDate.getTime()));
+        println("Alert 检索耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
 
         // 返回查询结果
         return needCreateAlerts;
@@ -101,7 +101,7 @@ class AlertData {
 
             // 结束处理
             Date  endHandle = new Date ()
-            println('insert prepare complete time : ' + (endHandle.getTime() - startHandle.getTime()))
+            println('Alert 插入预处理耗时（ms） : ' + (endHandle.getTime() - startHandle.getTime()))
 
             // 执行
             pstmt.executeBatch();
@@ -110,7 +110,7 @@ class AlertData {
 
             // 结束插入
             Date endInsert = new Date()
-            println('executeBatch:' + (endInsert.getTime() - endHandle.getTime()))
+            println('Alert 执行插入耗时（ms）:' + (endInsert.getTime() - endHandle.getTime()))
 
             // 返回插入数量
             return i;

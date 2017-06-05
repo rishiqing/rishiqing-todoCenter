@@ -144,7 +144,7 @@ class CommonUtil {
     public static void percent (int size, int index) {
         int a = size
         if (index % a  == 0) {
-            println('fetch todo (' + index / a/100 + '%)' )
+            println('检索日程完成百分比 : (' + index / a/100 + '%)' )
         }
     }
 
