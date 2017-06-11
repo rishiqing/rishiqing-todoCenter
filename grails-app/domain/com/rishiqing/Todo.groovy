@@ -10,7 +10,7 @@ class Todo {
     /** 奇怪的字段 */
     Date pPlanedTime
     /** 完成时间 */
-    Date pFinishedTime
+    Date pFinishedTime = null
     /** 排序字段 */
     Long pDisplayOrder = 0  //显示顺序
     /** 所属象限 */

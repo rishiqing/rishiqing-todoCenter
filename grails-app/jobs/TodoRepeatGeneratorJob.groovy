@@ -23,6 +23,7 @@ class TodoRepeatGeneratorJob {
         println "触发器启动";
         // 使用 cron 表达式进行控制：每天凌晨 00:05 进行生成
         cron name: "repeatTodoGenerator",startDelay: 60000, cronExpression: "0 5 0 * * ? *" ;
+//        cron name : "test",startDelay: 0,cronExpression: "0 0/1 * * * ?";
     }
     /*
      * 关于 triggers 的说明：
@@ -83,7 +84,20 @@ class TodoRepeatGeneratorJob {
         currentDate = new Date();
         // 创建 sql 对象
         Sql sql  = new Sql(dataSource);
+        // 重复日程生成器
+        Map oldTodoIdAndNewTodoIdMap = todoBuilder(sql)?todoBuilder(sql):[:];
+        // 时间生成器
+        Map oldClockIdAndNewClockIdMap = clockBuilder(oldTodoIdAndNewTodoIdMap,sql)?clockBuilder(oldTodoIdAndNewTodoIdMap,sql):[:];
+        // 提醒生成器
+        alertBuilder(oldClockIdAndNewClockIdMap,sql);
 
+    }
+
+    /**
+     * 日程生成器
+     * @return
+     */
+    def todoBuilder(Sql sql){
         // 开始进行生成操作
         println ("----------------- repeat todo job start --------------------");
         // 创建重复日程生成对象
@@ -94,20 +108,42 @@ class TodoRepeatGeneratorJob {
         Map<Long,Long> oldTodoIdAndNewTodoIdMap = todoRepeatData.generator(needCreateTodos);
         // 创建结束
         println("----------------- repeat todo job end --------------------");
+        // 返回
+        return oldTodoIdAndNewTodoIdMap;
+    }
 
-
+    /**
+     * 时间生成器
+     * @param oldTodoIdAndNewTodoIdMap
+     * @return
+     */
+    def clockBuilder(Map oldTodoIdAndNewTodoIdMap,Sql sql){
         Map<Long,Long> oldClockIdAndNewClockIdMap = [:];
         if(oldTodoIdAndNewTodoIdMap.size()>0){
             println("----------------- clock job start --------------------");
             ClockData clockData = new ClockData(sql);
             // 查询需要创建的时间
-            List<Clock> needCreateClock = clockData.fetch(oldTodoIdAndNewTodoIdMap);
+            List<Clock> repeatTodoNeedCreateClock = [];
+            List<Map> baseTodoNeedCreateClock = [];
+            // 查询日程需要生成的时间
+            clockData.fetchRepeatTodoClock(repeatTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap);
+            // 查询普通日程需要生成的时间
+            clockData.fetchBaseTodoClock(baseTodoNeedCreateClock,sql);
             // 进行时间的创建操作
-            oldClockIdAndNewClockIdMap = clockData.generator(needCreateClock,oldTodoIdAndNewTodoIdMap);
+            oldClockIdAndNewClockIdMap = clockData.generator(repeatTodoNeedCreateClock,baseTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap);
             // 创建结束
             println("----------------- clock job end --------------------");
+            // 返回
         }
+        return oldClockIdAndNewClockIdMap;
+    }
 
+    /**
+     * 提醒生成器
+     * @param oldClockIdAndNewClockIdMap
+     * @return
+     */
+    def alertBuilder(Map oldClockIdAndNewClockIdMap,Sql sql){
         if(oldClockIdAndNewClockIdMap.size()>0){
             println("----------------- alter job start --------------------");
             AlertData alertData = new AlertData(sql);

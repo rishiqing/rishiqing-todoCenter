@@ -221,8 +221,8 @@ class CommonUtil {
             // 设置第 i 个位置的值为boolean
             pstmt.setBoolean(i, value);
         }else {
-            // 设置第 i 个位置的值为 String 格式
-            pstmt.setString(i, value.toString());// 转 字符串
+            // 设置第 i 个位置的值为任意格式
+            pstmt.setString(i, value);// 转 字符串
         }
 
     }

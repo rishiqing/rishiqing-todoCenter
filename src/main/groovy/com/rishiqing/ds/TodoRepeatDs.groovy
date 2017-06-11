@@ -69,6 +69,7 @@ class TodoRepeatDs {
         map.inboxPContainer             =   todo.inboxPContainer
         map.isSystem                    =   true
 
+        println map
         return map
     }
 

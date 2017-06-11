@@ -40,10 +40,7 @@ class ClockData {
      * @param oldTodoIdAndNewTodoIdMap 日程新旧 id 的映射
      * @return
      */
-    def fetch(Map<Long,Long> oldTodoIdAndNewTodoIdMap) {
-
-        // 时间列表
-        List<Clock> needCreateClock = [];
+    def fetchRepeatTodoClock(List<Clock> repeatTodoNeedCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap) {
 
         // 开始查询的时间
         Date startFetchDate = new Date();
@@ -75,16 +72,72 @@ class ClockData {
                 // 如果可以查询到
                 if (clock) {
                     // 添加到需要创建的提醒队列中
-                    needCreateClock.add(clock);
+                    repeatTodoNeedCreateClock.add(clock);
                 }
             }
         }
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("Clock 查询结束耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
+        println("重复日程 Clock 查询结束耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
 
-        // 返回查询结果
-        return needCreateClock;
+    }
+
+    /**
+     * 查询普通日程
+     * @param needCreateClock 需要创建的日程列表
+     */
+    def fetchBaseTodoClock(List<Map> baseTodoNeedCreateClock,Sql sql) {
+        // 开始查询的时间
+        Date startFetchDate = new Date();
+        // 在进行检索操作时使用的日期
+        Date searchDate = new Date().clearTime();
+
+        try {
+            // 获取数据库连接
+            conn = sql.getDataSource().getConnection();
+            // sql 查询：日程是普通的日程或者重复日程但是关闭了重复的没有被删除的是一直提醒的 clock
+            String query = "SELECT c.id AS id,c.clock_user_id AS clockUserId, c.start_time AS startTime, c.end_time AS endTime, c.todo_id AS todoId, c.always_alert AS alwaysAlert, t.id AS todoId, t.dates AS dates, t.start_date AS startDate, t.end_date AS endDate FROM clock AS c INNER JOIN todo AS t ON c.todo_id = t.id LEFT JOIN todo_repeat_tag AS trt ON t.repeat_tag_id = trt.id WHERE ( trt.is_close_repeat = 1 OR ISNULL(t.repeat_tag_id) ) AND c.always_alert = 1 AND c.is_deleted = 0";
+            // 执行
+            pstmt = conn.prepareStatement(query);
+            // 获取结果
+            rs = pstmt.executeQuery();
+            // 获取结果
+            while(rs.next()){
+                Map clock = [:];
+                clock.put("id",rs.getLong("id"));
+                clock.put("clockUserId",rs.getLong("clockUserId"))
+                clock.put("startTime",rs.getString("startTime"));
+                clock.put("endTime",rs.getString("endTime"));
+                clock.put("todoId",rs.getLong("todoId"));
+                clock.put("alwaysAlert",rs.getBoolean("alwaysAlert"));
+                clock.put("todoId",rs.getLong("todoId"));
+
+                // 执行判断，看是否需要添加到 clock 中
+                if(rs.getString("dates")){
+                    String now = searchDate.format("yyyyMMdd");
+                    // 检测 dates 中有没有当前日期
+                    if(clock.get("dates").toString().contains(now)){
+                        // 执行添加
+                        baseTodoNeedCreateClock.add(clock);
+                    }
+                } else if(rs.getDate("startDate") && rs.getDate("endDate")){
+                    Date start = rs.getDate("startDate");
+                    Date end = rs.getDate("endDate");
+                    if(searchDate >= start && searchDate <= end){
+                        // 执行添加
+                        baseTodoNeedCreateClock.add(clock);
+                    }
+                }
+            }
+
+        } catch(SQLException e){
+            e.printStackTrace();
+            println ("查询失败")
+        }
+
+        // 开始查询的时间
+        Date endFetchDate = new Date();
+        println("普通日程 Clock 查询结束耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
     }
 
 
@@ -97,13 +150,13 @@ class ClockData {
      * @param needCreateClock 需要创建的时间的列表
      * @param oldTodoIdAndNewTodoIdMap 日程新旧 id 组成的映射
      */
-    def generator(List<Clock> needCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap){
+    def generator(List<Clock> repeatTodoNeedCreateClock,List<Map> baseTodoNeedCreateClock, Map<Long,Long> oldTodoIdAndNewTodoIdMap){
         Map<Long,Long> oldClockIdAndNewClockId = [:];
-        if(needCreateClock.size()>0){
+        if(repeatTodoNeedCreateClock.size()>0 || baseTodoNeedCreateClock >0){
             // 处理自增长值并且获取到原来的自增长值
-            Long oldAutoIncrement = handleClockAutoIncrement(needCreateClock);
+            Long oldAutoIncrement = handleClockAutoIncrement(repeatTodoNeedCreateClock,baseTodoNeedCreateClock);
             // 执行创建操作
-            oldClockIdAndNewClockId = batchInsertClock(needCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
+            oldClockIdAndNewClockId = batchInsertClock(repeatTodoNeedCreateClock,baseTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
         }
         // 返回时间的 新旧 ID 映射
         return oldClockIdAndNewClockId;
@@ -114,7 +167,7 @@ class ClockData {
      * @param needCreateClock 需要创建的时间的列表
      * @return
      */
-    def handleClockAutoIncrement(List needCreateClock){
+    def handleClockAutoIncrement(List repeatTodoNeedCreateClock,List baseTodoNeedCreateClock){
         try{
 
             println "处理Clock id 自增长开始";
@@ -130,9 +183,13 @@ class ClockData {
             // 获取结果集
             rs = pstmt.executeQuery();
             // 获取时间的数量
-            Long oldAutoIncrement = rs.getLong(1) + 1;
+            Long oldAutoIncrement = -1;
+            while(rs.next()){
+                oldAutoIncrement = rs.getLong(1) + 1;
+            }
+
             // 获取要创建的 clock 的数量
-            Long size = needCreateClock.size();
+            Long size = repeatTodoNeedCreateClock.size() + baseTodoNeedCreateClock.size();
             // 计算新的自增长的值
             Long newAutoIncrement = oldAutoIncrement + size
             // 更改自增长的值
@@ -165,7 +222,7 @@ class ClockData {
      * @param oldAutoIncrement 原来自增长的值
      * @return oldClockIdAndNewClockIdMap 新旧提醒的映射
      */
-    private def batchInsertClock(List<Clock> needCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap,Long oldAutoIncrement){
+    private def batchInsertClock(List<Clock> repeatTodoNeedCreateClock,List<Map> baseTodoNeedCreateClock,Map<Long,Long> oldTodoIdAndNewTodoIdMap,Long oldAutoIncrement){
         // 新旧 clock id　组成的Map
         Map<Long,Long> oldClockIdAndNewClockIdMap = [:];
         try{
@@ -181,8 +238,12 @@ class ClockData {
             // 预编译
             pstmt = conn.prepareStatement(query);
             // 数据组装
-            needCreateClock.each { clock ->
+            repeatTodoNeedCreateClock.each { clock ->
                 ClockDs.prepareInsert(clock,pstmt,oldClockIdAndNewClockIdMap,oldAutoIncrement,oldTodoIdAndNewTodoIdMap);
+                oldAutoIncrement ++ ;
+            }
+            baseTodoNeedCreateClock.each { clock ->
+                ClockDs.prepareInsert(clock,pstmt,oldClockIdAndNewClockIdMap,oldAutoIncrement);
                 oldAutoIncrement ++ ;
             }
 
