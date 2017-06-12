@@ -50,6 +50,7 @@ class ClockDs {
         map.startTime           = clock.startTime;
         map.taskDate            = timestampToday;
         map.todoId              = clock.todoId;
+        map.alwaysAlert         = true;
         // 返回
         return map;
     }

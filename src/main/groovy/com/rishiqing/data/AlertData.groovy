@@ -52,7 +52,7 @@ class AlertData {
         // 开始查询的时间
         Date endFetchDate = new Date();
         println("Alert 检索耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
-
+        println("查询结果 :" + needCreateAlerts?needCreateAlerts.size():0 + "个 Clock");
         // 返回查询结果
         return needCreateAlerts;
     }

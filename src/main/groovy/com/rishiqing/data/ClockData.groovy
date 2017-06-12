@@ -79,7 +79,7 @@ class ClockData {
         // 开始查询的时间
         Date endFetchDate = new Date();
         println("重复日程 Clock 查询结束耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
-
+        println("查询结果 :" + repeatTodoNeedCreateClock.size() +"个 Clock");
     }
 
     /**
@@ -152,12 +152,10 @@ class ClockData {
      */
     def generator(List<Clock> repeatTodoNeedCreateClock,List<Map> baseTodoNeedCreateClock, Map<Long,Long> oldTodoIdAndNewTodoIdMap){
         Map<Long,Long> oldClockIdAndNewClockId = [:];
-        if(repeatTodoNeedCreateClock.size()>0 || baseTodoNeedCreateClock >0){
-            // 处理自增长值并且获取到原来的自增长值
-            Long oldAutoIncrement = handleClockAutoIncrement(repeatTodoNeedCreateClock,baseTodoNeedCreateClock);
-            // 执行创建操作
-            oldClockIdAndNewClockId = batchInsertClock(repeatTodoNeedCreateClock,baseTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
-        }
+        // 处理自增长值并且获取到原来的自增长值
+        Long oldAutoIncrement = handleClockAutoIncrement(repeatTodoNeedCreateClock,baseTodoNeedCreateClock);
+        // 执行创建操作
+        oldClockIdAndNewClockId = batchInsertClock(repeatTodoNeedCreateClock,baseTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
         // 返回时间的 新旧 ID 映射
         return oldClockIdAndNewClockId;
     }
@@ -242,9 +240,15 @@ class ClockData {
                 ClockDs.prepareInsert(clock,pstmt,oldClockIdAndNewClockIdMap,oldAutoIncrement,oldTodoIdAndNewTodoIdMap);
                 oldAutoIncrement ++ ;
             }
-            baseTodoNeedCreateClock.each { clock ->
+//            baseTodoNeedCreateClock.each { clock ->
+//
+//
+//            }
+            for(int i = 0;i<baseTodoNeedCreateClock.size();i++){
+                Map clock = baseTodoNeedCreateClock.get(i);
                 ClockDs.prepareInsert(clock,pstmt,oldClockIdAndNewClockIdMap,oldAutoIncrement);
                 oldAutoIncrement ++ ;
+                println oldAutoIncrement
             }
 
             // 结束处理
