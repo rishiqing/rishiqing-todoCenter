@@ -1,6 +1,5 @@
 package com.rishiqing.ds
 
-import com.rishiqing.Clock
 import com.rishiqing.Todo
 import com.rishiqing.TodoDeploy
 import com.rishiqing.util.CommonUtil
@@ -69,7 +68,7 @@ class TodoRepeatDs {
         map.inboxPContainer             =   todo.inboxPContainer
         map.isSystem                    =   true
 
-        println map
+        println "日程 id: " + map.id +"; 日程标题: " + map.pTitle
         return map
     }
 
@@ -93,28 +92,4 @@ class TodoRepeatDs {
         // 将设置好的一组数据添加到 预编译对象中
         pstmt.addBatch();
     }
-
-
-//    /**
-//     * map转string
-//     * @return
-//     */
-//    static  String toInsertString (Todo todo) {
-//        int i = 0
-//        StringBuffer sql = new StringBuffer()
-//        def todoMap = toSqlMap(todo)
-//        todoMap.each { key, value->
-//            sql .append(parse(value, i))
-//            i ++
-//        }
-//        return '(' +  sql + ')'
-//    }
-//
-//    static  String parse (def object) {
-//        if  (!object || object == 'NULL' ) {
-//            return null
-//        } else {
-//            return object
-//        }
-//    }
 }

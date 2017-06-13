@@ -48,7 +48,7 @@ class ClockData {
         // 在进行检索操作时使用的日期
         Date searchDate = new Date().clearTime();
         // 遍历日程新旧id 的Map，通过日程 id 值来查询其下面的提醒
-        oldTodoIdAndNewTodoIdMap.entrySet().each { oldTodoId, newTodoId ->
+        oldTodoIdAndNewTodoIdMap.each { oldTodoId, newTodoId ->
             // 查询此日程在查询的日期下是否被安排了时间和提醒
             def currentClock = Clock.createCriteria().get {
                 and {
@@ -65,7 +65,7 @@ class ClockData {
                     and {
                         eq("todoId", oldTodoId);
                         eq("alwaysAlert", true);
-                        eq("isDelete",false);
+                        eq("isDeleted",false);
                     }
                     sqlRestriction("1=1 order by this_.id desc limit 1");
                 }

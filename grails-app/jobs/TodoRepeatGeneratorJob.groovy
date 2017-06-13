@@ -85,15 +85,15 @@ class TodoRepeatGeneratorJob {
         // 创建 sql 对象
         Sql sql  = new Sql(dataSource);
         println ("============================================================");
-        println ("触发时间 : " + currentDate.format("yyyy-MM-dd HH:mm:ss"));
+        println ("触发时间 : " + new Date().format("yyyy-MM-dd HH:mm:ss"));
         // 重复日程生成器
-        Map oldTodoIdAndNewTodoIdMap = todoBuilder(sql)?todoBuilder(sql):[:];
+        Map oldTodoIdAndNewTodoIdMap = todoBuilder(sql);
         // 时间生成器
-        Map oldClockIdAndNewClockIdMap = clockBuilder(oldTodoIdAndNewTodoIdMap,sql);
+        Map oldClockIdAndNewClockIdMap = clockBuilder(oldTodoIdAndNewTodoIdMap?oldTodoIdAndNewTodoIdMap:[:],sql);
         // 提醒生成器
         alertBuilder(oldClockIdAndNewClockIdMap?oldClockIdAndNewClockIdMap:[:],sql);
         println ("============================================================");
-        println ("操作结束 : " + currentDate.format("yyyy-MM-dd HH:mm:ss"));
+        println ("操作结束 : " + new Date().format("yyyy-MM-dd HH:mm:ss"));
     }
 
     /**

@@ -4,7 +4,6 @@ import com.rishiqing.Alert
 import com.rishiqing.ds.AlertDs
 import com.rishiqing.util.ResourceUtil
 import groovy.sql.Sql
-import org.hibernate.annotations.SQLUpdate
 
 import java.sql.Connection
 import java.sql.PreparedStatement
