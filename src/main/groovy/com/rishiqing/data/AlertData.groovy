@@ -42,7 +42,7 @@ class AlertData {
         Date startFetchDate = new Date();
 
         // 进行提醒的查询操作
-        oldClockIdAndNewClockIdMap.entrySet().each { oldClockId,newClockId ->
+        oldClockIdAndNewClockIdMap.each { oldClockId,newClockId ->
             // 查询原来的时间下的所有提醒
             def alerts = Alert.findAllByClockId(oldClockId.toString().toLong());
             // 装入需要创建的提醒列表
@@ -88,7 +88,7 @@ class AlertData {
             // 关闭自动提交
             conn.setAutoCommit(false);
             // sql
-            String query = "INSERT INTO `alert` (`alert_time`, `clock_id`, `date_created`, `is_user_defined`, `schedule` ) VALUES (?, ?, ?, ?, ?, ?)";
+            String query = "INSERT INTO `alert` (`alert_time`, `clock_id`, `date_created`, `is_user_defined`, `schedule` ) VALUES (?, ?, ?, ?, ?)";
             // 预编译
             pstmt = conn.prepareStatement(query);
             // 插入的提醒的数量计算

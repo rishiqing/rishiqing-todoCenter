@@ -156,6 +156,10 @@ class ClockData {
         Long oldAutoIncrement = handleClockAutoIncrement(repeatTodoNeedCreateClock,baseTodoNeedCreateClock);
         // 执行创建操作
         oldClockIdAndNewClockId = batchInsertClock(repeatTodoNeedCreateClock,baseTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
+        // 处理旧的一直提醒，把他们的 alwaysRepeat 关掉
+        if(oldClockIdAndNewClockId){
+            handleOldClockAlwaysAlert(oldClockIdAndNewClockId);
+        }
         // 返回时间的 新旧 ID 映射
         return oldClockIdAndNewClockId;
     }
@@ -236,19 +240,16 @@ class ClockData {
             // 预编译
             pstmt = conn.prepareStatement(query);
             // 数据组装
-            repeatTodoNeedCreateClock.each { clock ->
+            for(int i = 0;i<repeatTodoNeedCreateClock.size();i++){
+                Clock clock = repeatTodoNeedCreateClock.get(i);
                 ClockDs.prepareInsert(clock,pstmt,oldClockIdAndNewClockIdMap,oldAutoIncrement,oldTodoIdAndNewTodoIdMap);
                 oldAutoIncrement ++ ;
             }
-//            baseTodoNeedCreateClock.each { clock ->
-//
-//
-//            }
+
             for(int i = 0;i<baseTodoNeedCreateClock.size();i++){
                 Map clock = baseTodoNeedCreateClock.get(i);
                 ClockDs.prepareInsert(clock,pstmt,oldClockIdAndNewClockIdMap,oldAutoIncrement);
                 oldAutoIncrement ++ ;
-                println oldAutoIncrement
             }
 
             // 结束处理
@@ -270,6 +271,32 @@ class ClockData {
             e.printStackTrace();
         } finally {
             ResourceUtil.resourceClose(conn,pstmt,rs);
+        }
+    }
+
+    /**
+     * 处理旧的clock 的 alwaysAlert 值，置为 false
+     * @param oldClockIdAndNewClockId
+     * @return
+     */
+    def handleOldClockAlwaysAlert(Map oldClockIdAndNewClockId){
+        List oldClockIds = [];
+        oldClockIdAndNewClockId.entrySet().each { es ->
+            oldClockIds.add(es.key);
+        }
+        try{
+            conn = sql.getDataSource().getConnection();
+            conn.setAutoCommit(false);
+            String query = "update `clock` as c set c.always_alert = 0 where c.id in (?)";
+            pstmt = conn.prepareStatement(query);
+            pstmt.setString(1,oldClockIds.join(","));
+            pstmt.executeUpdate();
+            conn.commit();
+        } catch (SQLException e){
+            e.printStackTrace();
+            println "alwaysAlert 刷新失败!"
+        } finally{
+            ResourceUtil.resourceClose(conn,pstmt,null);
         }
     }
 

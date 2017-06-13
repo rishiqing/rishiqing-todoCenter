@@ -25,7 +25,7 @@ class AlertDs {
         Clock newClock = Clock.findById(oldClockIdAndNewClockIdMap.get(alert.clockId).toString().toLong());
 
         // 组装
-        map.alertTime       = getAlertTime(newClock.taskDate,newClock.startTime,newClock.endTime,alert.schedule);
+        map.alertTime       = new Timestamp(getAlertTime(newClock.taskDate,newClock.startTime,newClock.endTime,alert.schedule).getTime());
         map.clockId         = newClock.id;
         map.dateCreated     = timestampNow;
         map.isUserDefined   = alert.isUserDefined

@@ -87,9 +87,9 @@ class TodoRepeatGeneratorJob {
         // 重复日程生成器
         Map oldTodoIdAndNewTodoIdMap = todoBuilder(sql)?todoBuilder(sql):[:];
         // 时间生成器
-        Map oldClockIdAndNewClockIdMap = clockBuilder(oldTodoIdAndNewTodoIdMap,sql)?clockBuilder(oldTodoIdAndNewTodoIdMap,sql):[:];
+        Map oldClockIdAndNewClockIdMap = clockBuilder(oldTodoIdAndNewTodoIdMap,sql);
         // 提醒生成器
-        alertBuilder(oldClockIdAndNewClockIdMap,sql);
+        alertBuilder(oldClockIdAndNewClockIdMap?oldClockIdAndNewClockIdMap:[:],sql);
 
     }
 
