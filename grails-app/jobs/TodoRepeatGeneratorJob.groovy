@@ -73,7 +73,7 @@ class TodoRepeatGeneratorJob {
     static Date currentDate = null;
     /** 触发器 */
     static triggers = {
-        println "触发器启动";
+        println "触发器启动 : " + new Date().format("yyyy-MM-dd HH:mm:ss");
         // 使用 cron 表达式进行控制：每天凌晨 00:05 进行生成
         cron name: "repeatTodoGenerator",startDelay: 60000, cronExpression: "0 5 0 * * ? *" ;
     }
@@ -84,13 +84,16 @@ class TodoRepeatGeneratorJob {
         currentDate = new Date();
         // 创建 sql 对象
         Sql sql  = new Sql(dataSource);
+        println ("============================================================");
+        println ("触发时间 : " + currentDate.format("yyyy-MM-dd HH:mm:ss"));
         // 重复日程生成器
         Map oldTodoIdAndNewTodoIdMap = todoBuilder(sql)?todoBuilder(sql):[:];
         // 时间生成器
         Map oldClockIdAndNewClockIdMap = clockBuilder(oldTodoIdAndNewTodoIdMap,sql);
         // 提醒生成器
         alertBuilder(oldClockIdAndNewClockIdMap?oldClockIdAndNewClockIdMap:[:],sql);
-
+        println ("============================================================");
+        println ("操作结束 : " + currentDate.format("yyyy-MM-dd HH:mm:ss"));
     }
 
     /**
@@ -99,7 +102,7 @@ class TodoRepeatGeneratorJob {
      */
     def todoBuilder(Sql sql){
         // 开始进行生成操作
-        println ("----------------- repeat todo job start --------------------");
+        println("----------------- repeat todo job start --------------------");
         // 创建重复日程生成对象
         TodoRepeatData todoRepeatData = new TodoRepeatData(sql);
         // 开始查询，获取到所有需要进行创建的重复日程的信息.
@@ -107,7 +110,7 @@ class TodoRepeatGeneratorJob {
         // 启动日程创建
         Map<Long,Long> oldTodoIdAndNewTodoIdMap = todoRepeatData.generator(needCreateTodos);
         // 创建结束
-        println("----------------- repeat todo job end --------------------");
+        println("----------------- repeat todo job end ----------------------");
         // 返回
         return oldTodoIdAndNewTodoIdMap;
     }
@@ -119,7 +122,7 @@ class TodoRepeatGeneratorJob {
      */
     def clockBuilder(Map oldTodoIdAndNewTodoIdMap,Sql sql){
         Map<Long,Long> oldClockIdAndNewClockIdMap = [:];
-        println("----------------- clock job start --------------------");
+        println("----------------- clock job start --------------------------");
         ClockData clockData = new ClockData(sql);
         // 查询需要创建的时间
         List<Clock> repeatTodoNeedCreateClock = [];
@@ -133,7 +136,7 @@ class TodoRepeatGeneratorJob {
             oldClockIdAndNewClockIdMap = clockData.generator(repeatTodoNeedCreateClock,baseTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap);
         }
         // 创建结束
-        println("----------------- clock job end --------------------");
+        println("----------------- clock job end ----------------------------");
         // 返回
         return oldClockIdAndNewClockIdMap;
     }
@@ -144,7 +147,7 @@ class TodoRepeatGeneratorJob {
      * @return
      */
     def alertBuilder(Map oldClockIdAndNewClockIdMap,Sql sql){
-        println("----------------- alter job start --------------------");
+        println("----------------- alter job start --------------------------");
         AlertData alertData = new AlertData(sql);
         // 查询需要创建的提醒
         List<Alert> needCreateAlerts = alertData.fetch(oldClockIdAndNewClockIdMap);
@@ -155,7 +158,7 @@ class TodoRepeatGeneratorJob {
             println("插入 Alert 总数 : ${alertNum}");
         }
         println("插入 Alert 总数 ： 0")
-        println("----------------- alert job end --------------------");
+        println("----------------- alert job end ----------------------------");
 
     }
 }

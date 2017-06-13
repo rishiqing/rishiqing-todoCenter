@@ -78,7 +78,7 @@ class ClockData {
         }
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("重复日程 Clock 查询结束耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
+        println("重复日程 Clock 查询耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms");
         println("查询结果 :" + repeatTodoNeedCreateClock.size() +"个 Clock");
     }
 
@@ -137,7 +137,8 @@ class ClockData {
 
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("普通日程 Clock 查询结束耗时（ms） : " + (startFetchDate.getTime() - endFetchDate.getTime()));
+        println("普通日程 Clock 查询耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms");
+        println("查询结果 : "+ baseTodoNeedCreateClock.size() + "个 Clock");
     }
 
 
@@ -173,6 +174,7 @@ class ClockData {
         try{
 
             println "处理Clock id 自增长开始";
+            Date handleStart = new Date();
 
             // 获取数据库连接对象
             conn = sql.getDataSource().getConnection();
@@ -205,7 +207,8 @@ class ClockData {
             // 提交
             conn.commit();
 
-            println "处理Clock id 自增长结束";
+            Date handleEnd = new Date();
+            println "处理Clock id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms";
 
             // 返回自增长的值
             return oldAutoIncrement;
@@ -254,7 +257,7 @@ class ClockData {
 
             // 结束处理
             Date  endHandle = new Date ()
-            println('Clock插入预处理时间（ms） : ' + (endHandle.getTime() - startHandle.getTime()))
+            println('Clock 插入预处理耗时 : ' + (endHandle.getTime() - startHandle.getTime()) + "ms")
 
             // 执行批量插入操作
             pstmt.executeBatch();
@@ -263,7 +266,7 @@ class ClockData {
 
             // 结束插入
             Date endInsert = new Date()
-            println('Clock 执行插入处理时间（ms） :' + (endInsert.getTime() - endHandle.getTime()))
+            println('Clock 执行插入耗时 :' + (endInsert.getTime() - endHandle.getTime()) + "ms");
 
             // 返回clock 新旧 id 的映射
             return oldClockIdAndNewClockIdMap;

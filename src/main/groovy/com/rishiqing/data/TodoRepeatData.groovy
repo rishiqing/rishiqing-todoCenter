@@ -58,12 +58,12 @@ class TodoRepeatData {
 
         Date endSearch = new Date();  // 用来记录重复日程标记结束查询的时间
         // 搜索时长
-        println("检索日程重复标记花费时间（ms）: " + (endSearch.getTime() - startSearch. getTime()));
+        println("检索 TodoRepeatTag 耗时 : " + (endSearch.getTime() - startSearch. getTime()) + "ms");
 
         // 获取list的长度
         Integer listSize = repeatTagList ? repeatTagList.size() : 0;
         // 重复标记的数量，每个标记对应一个重复的日程。
-        println("查询到的日程重复标记数量 : " + listSize);
+        println("检索到 TodoRepeatTag 数量 : " + listSize + "个");
 
         // 阀值，用来计算查询结果的百分比使用
         Integer i = 0;
@@ -106,7 +106,7 @@ class TodoRepeatData {
         }
         // 完成所有需要创建的重复日程的查询
         Date endFetch = new Date();
-        println("检索日程完成，花费（ms）: " + (endFetch.getTime() - endSearch.getTime()));
+        println("检索 Todo 耗时 : " + (endFetch.getTime() - endSearch.getTime()) + "ms");
         return needCreateTodos;
     }
 
@@ -139,7 +139,7 @@ class TodoRepeatData {
             }
         }
         // 需要进行重复日程创建的日程的数量
-        println('需要生成的重复日程数量 : ' + todoResultList.size())
+        println('需要生成 Repeat Todo 数量 : ' + todoResultList.size() + "个");
 
         Map<Long,Long> oldTodoIdAndNewTodoIdMap = [:];
         if(todoResultList.size() > 0){
@@ -168,7 +168,8 @@ class TodoRepeatData {
     private def handleTodoAutoIncrement(List todoResultList){
         try{
 
-            println "处理Todo id 自增长开始";
+            println "处理 Todo id 自增长开始";
+            Date handleStart = new Date();
 
             // 获取数据库连接
             conn = sql.getDataSource().getConnection();
@@ -201,7 +202,8 @@ class TodoRepeatData {
             // 进行提交
             conn.commit();
 
-            println "处理Todo id 自增长结束";
+            Date handleEnd = new Date();
+            println "处理Todo id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms";
 
             // 返回老的自增长的值
             return oldAutoIncrement;
