@@ -63,7 +63,7 @@ class TodoRepeatData {
         // 获取list的长度
         Integer listSize = repeatTagList ? repeatTagList.size() : 0;
         // 重复标记的数量，每个标记对应一个重复的日程。
-        println("检索到 TodoRepeatTag 数量 : " + listSize + "个");
+        println("检索到 TodoRepeatTag 数量 : " + listSize + "个，${repeatTagList.id}");
 
         // 阀值，用来计算查询结果的百分比使用
         Integer i = 0;

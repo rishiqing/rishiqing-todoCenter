@@ -2,6 +2,7 @@ package com.rishiqing.data
 
 import com.rishiqing.Clock
 import com.rishiqing.ds.ClockDs
+import com.rishiqing.util.DateUtil
 import com.rishiqing.util.ResourceUtil
 import groovy.sql.Sql
 
@@ -96,9 +97,15 @@ class ClockData {
             // 获取数据库连接
             conn = sql.getDataSource().getConnection();
             // sql 查询：日程是普通的日程或者重复日程但是关闭了重复的没有被删除的是一直提醒的 clock
-            String query = "SELECT c.id AS id,c.clock_user_id AS clockUserId, c.start_time AS startTime, c.end_time AS endTime, c.todo_id AS todoId, c.always_alert AS alwaysAlert, t.id AS todoId, t.dates AS dates, t.start_date AS startDate, t.end_date AS endDate FROM clock AS c INNER JOIN todo AS t ON c.todo_id = t.id LEFT JOIN todo_repeat_tag AS trt ON t.repeat_tag_id = trt.id WHERE ( trt.is_close_repeat = 1 OR ISNULL(t.repeat_tag_id) ) AND c.always_alert = 1 AND c.is_deleted = 0";
+            String query = "SELECT c.id AS id, c.clock_user_id AS clockUserId, c.start_time AS startTime, c.end_time AS endTime, c.always_alert AS alwaysAlert, t.id AS todoId,t.dates AS dates FROM clock AS c INNER JOIN todo AS t ON c.todo_id = t.id LEFT JOIN todo_repeat_tag AS trt ON t.repeat_tag_id = trt.id WHERE ( trt.is_close_repeat = 1 OR ISNULL(t.repeat_tag_id) ) AND c.always_alert = 1 AND c.is_deleted = 0 AND ( ( t.dates LIKE ? OR ( t.start_date < ? AND t.end_date >= ? ) ) OR ( t.p_is_done = 0 AND ( t.dates NOT LIKE ? OR t.end_date < ? )));";
             // 执行
             pstmt = conn.prepareStatement(query);
+            // 设置参数
+            pstmt.setString(1,"%${searchDate.format("yyyyMMdd")}%");
+            pstmt.setString(2,searchDate.format("yyyy-MM-dd HH:mm:ss"));
+            pstmt.setString(3,searchDate.format("yyyy-MM-dd HH:mm:ss"));
+            pstmt.setString(4,"%${searchDate.format("yyyyMMdd")}%");
+            pstmt.setString(5,searchDate.format("yyyy-MM-dd HH:mm:ss"));
             // 获取结果
             rs = pstmt.executeQuery();
             // 获取结果
@@ -112,22 +119,20 @@ class ClockData {
                 clock.put("alwaysAlert",rs.getBoolean("alwaysAlert"));
                 clock.put("todoId",rs.getLong("todoId"));
 
-                // 执行判断，看是否需要添加到 clock 中
-                if(rs.getString("dates")){
-                    String now = searchDate.format("yyyyMMdd");
-                    // 检测 dates 中有没有当前日期
-                    if(clock.get("dates").toString().contains(now)){
+                String dates = rs.getString("dates");
+                if(dates){
+                    String datesFormat = DateUtil.datesFormat(dates,"yyyyMMdd");
+                    Date maxDate = DateUtil.parseDate(datesFormat.split(",").last(),"yyyyMMdd");
+                    // dates中包含当前搜索日期 或者 搜索日期大于最大日期
+                    if(datesFormat.contains(searchDate.format("yyyyMMdd")) || searchDate > maxDate ){
                         // 执行添加
                         baseTodoNeedCreateClock.add(clock);
                     }
-                } else if(rs.getDate("startDate") && rs.getDate("endDate")){
-                    Date start = rs.getDate("startDate");
-                    Date end = rs.getDate("endDate");
-                    if(searchDate >= start && searchDate <= end){
-                        // 执行添加
-                        baseTodoNeedCreateClock.add(clock);
-                    }
+                } else {
+                    // 执行添加
+                    baseTodoNeedCreateClock.add(clock);
                 }
+
             }
 
         } catch(SQLException e){
@@ -290,9 +295,8 @@ class ClockData {
         try{
             conn = sql.getDataSource().getConnection();
             conn.setAutoCommit(false);
-            String query = "update `clock` as c set c.always_alert = 0 where c.id in (?)";
+            String query = "update `clock` as c set c.always_alert = 0 where c.id in ("+oldClockIds.join(",")+")";
             pstmt = conn.prepareStatement(query);
-            pstmt.setString(1,oldClockIds.join(","));
             pstmt.executeUpdate();
             conn.commit();
         } catch (SQLException e){

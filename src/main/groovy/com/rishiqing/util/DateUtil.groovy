@@ -58,4 +58,28 @@ class DateUtil {
     public static Date getDate(Long timestamp){
         return new Date(timestamp * 1000);
     }
+
+    /**
+     * 键入 dates ，重新排序之后按指定格式返回
+     */
+    static String datesFormat(String dates,String format) {
+        List datesList = [];
+        // 拆分
+        String[] datesArr = dates.split(",");
+        // 遍历
+        Map<Long, String> compare = [:];
+        datesArr.each { d ->
+            Date oneDay = parseDate(d, "yyyyMMdd");
+            Long mill = oneDay.getTime();
+            compare.put(mill, oneDay.format(format));
+        }
+        // 排序
+        TreeMap sortMap = new TreeMap(compare);
+        //处理请求map ,使用 entrySet 的方式遍历 Map
+        sortMap.entrySet().each { es ->
+            datesList.add(es.value);
+        }
+        // 重新返回
+        return datesList.join(",");
+    }
 }
