@@ -74,4 +74,4 @@ assets {
     minifyJs = true
     minifyCss = true
 }
-war.archiveName "../../YOUR_SPECIAL_NAME.war"
+war.archiveName "../../rishiqing-todoCenter.war"
