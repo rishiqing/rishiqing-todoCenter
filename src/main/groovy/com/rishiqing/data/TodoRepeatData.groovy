@@ -58,12 +58,12 @@ class TodoRepeatData {
 
         Date endSearch = new Date();  // 用来记录重复日程标记结束查询的时间
         // 搜索时长
-        println("检索 TodoRepeatTag 耗时 : " + (endSearch.getTime() - startSearch. getTime()) + "ms");
+        println("检索 TodoRepeatTag 耗时 : " + (endSearch.getTime() - startSearch. getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
 
         // 获取list的长度
         Integer listSize = repeatTagList ? repeatTagList.size() : 0;
         // 重复标记的数量，每个标记对应一个重复的日程。
-        println("检索到 TodoRepeatTag 数量 : " + listSize + "个，${repeatTagList.id}");
+        println("检索到 TodoRepeatTag 数量 : " + listSize + "个" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
 
         // 阀值，用来计算查询结果的百分比使用
         Integer i = 0;
@@ -106,7 +106,7 @@ class TodoRepeatData {
         }
         // 完成所有需要创建的重复日程的查询
         Date endFetch = new Date();
-        println("检索 Todo 耗时 : " + (endFetch.getTime() - endSearch.getTime()) + "ms");
+        println("检索 Todo 耗时 : " + (endFetch.getTime() - endSearch.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
         return needCreateTodos;
     }
 
@@ -139,7 +139,7 @@ class TodoRepeatData {
             }
         }
         // 需要进行重复日程创建的日程的数量
-        println('需要生成 Repeat Todo 数量 : ' + todoResultList.size() + "个");
+        println('需要生成 Repeat Todo 数量 : ' + todoResultList.size() + "个" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
 
         Map<Long,Long> oldTodoIdAndNewTodoIdMap = [:];
         if(todoResultList.size() > 0){
@@ -152,9 +152,9 @@ class TodoRepeatData {
             // 打开重复日程的创建开关 (isRepeatTodo)，当 isRepeatTod0 = 1是，第一天的日程将不显示延期。
             String todoIds = todoIdsSb.toString();
             if(todoIds && !"".equals(todoIds)){
-                println "todo update isRepeatTodo start"
+                println "todo update isRepeatTodo start" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}"
                 sql.executeUpdate("UPDATE  todo set is_repeat_todo=1 where id in ("+(todoIds.endsWith(",")?todoIds.substring(0,todoIds.length()-1):todoIds)+")")
-                println "todo update isRepeatTodo end"
+                println "todo update isRepeatTodo end" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}"
             }
         }
         return oldTodoIdAndNewTodoIdMap;
@@ -168,42 +168,63 @@ class TodoRepeatData {
     private def handleTodoAutoIncrement(List todoResultList){
         try{
 
-            println "处理 Todo id 自增长开始";
+            println "处理 Todo id 自增长开始" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}";
             Date handleStart = new Date();
 
             // 获取数据库连接
             conn = sql.getDataSource().getConnection();
             // 设置自动提交为false，在添加完所有要插入的数据之后，批量进行插入。
             conn.setAutoCommit(false);
+            // 执行写锁定
+            String lock = "lock table `todo` write;";
+            // 预编译
+            pstmt = conn.prepareStatement(lock);
+            // 执行
+            pstmt.execute();
             // 获取要生成的日程列表的长度
-            String query1 = "select max(id) from `todo` as t for update";
+            String query1 = "select max(id) from `todo`;";
             // 预编译
             pstmt = conn.prepareStatement(query1);
             // 执行查询，获取结果集
             rs = pstmt.executeQuery();
             // 获取结果集
-            Long oldAutoIncrement = -1;
+            Long oldAutoIncrement = null;
             // 取值
             while(rs.next()){
                 oldAutoIncrement = rs.getLong(1) + 1;
             }
-            // 获取要插入的日程的数量
-            Long size = todoResultList.size();
-            // 获取新的自增长值 = 老的自增长 + 插入日程的长度;
-            Long newAutoIncrement = oldAutoIncrement + size;
-            // 更新表
-            String query2 = "alter table `todo` AUTO_INCREMENT = ?";
-            // 预编译
-            pstmt = conn.prepareStatement(query2);
-            // 设置参数，改为新的自增长值
-            pstmt.setLong(1,newAutoIncrement);
-            // 运行 sql
+            if(oldAutoIncrement){
+                // 获取要插入的日程的数量
+                Long size = todoResultList.size();
+                // 获取新的自增长值 = 老的自增长 + 插入日程的长度;
+                Long newAutoIncrement = oldAutoIncrement + size;
+                // 更新表
+                String query2 = "alter table `todo` AUTO_INCREMENT = ?";
+                // 预编译
+                pstmt = conn.prepareStatement(query2);
+                // 设置参数，改为新的自增长值
+                pstmt.setLong(1,newAutoIncrement);
+                // 运行 sql
+                pstmt.execute();
+            } else {
+                throw new Exception("自增长设置失败!");
+            }
+
+            // 执行解锁
+            String unlock = "unlock table;";
+            //　预编译
+            pstmt = conn.prepareStatement(unlock);
+            //　执行
             pstmt.execute();
+
             // 进行提交
             conn.commit();
+            // 重新设置提交
+            conn.setAutoCommit(true);
+
 
             Date handleEnd = new Date();
-            println "处理Todo id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms";
+            println "处理Todo id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}";
 
             // 返回老的自增长的值
             return oldAutoIncrement;
@@ -242,7 +263,7 @@ class TodoRepeatData {
 
             // 结束处理
             Date  endHandle = new Date ()
-            println('日程插入预处理时间（ms） : ' + (endHandle.getTime() - startHandle.getTime()))
+            println('日程插入预处理时间（ms） : ' + (endHandle.getTime() - startHandle.getTime()) + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}")
 
             // 执行批量插入
             pstmt.executeBatch()
@@ -251,7 +272,7 @@ class TodoRepeatData {
 
             // 结束插入
             Date endInsert = new Date()
-            println('执行插入处理时间（ms）:' + (endInsert.getTime() - endHandle.getTime()))
+            println('执行插入处理时间（ms）:' + (endInsert.getTime() - endHandle.getTime()) + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}")
             // 返回日程老 id 和新 id 的 Map
             return oldTodoIdAndNewTodoIdMap;
         } catch(SQLException e){

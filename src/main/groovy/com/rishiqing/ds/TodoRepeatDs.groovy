@@ -68,7 +68,6 @@ class TodoRepeatDs {
         map.inboxPContainer             =   todo.inboxPContainer
         map.isSystem                    =   true
 
-        println "日程 id: " + map.id +"; 日程标题: " + map.pTitle
         return map
     }
 

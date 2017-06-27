@@ -79,7 +79,7 @@ class ClockData {
         }
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("重复日程 Clock 查询耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms");
+        println("重复日程 Clock 查询耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
         println("查询结果 :" + repeatTodoNeedCreateClock.size() +"个 Clock");
     }
 
@@ -142,7 +142,7 @@ class ClockData {
 
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("普通日程 Clock 查询耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms");
+        println("普通日程 Clock 查询耗时 : " + (endFetchDate.getTime() - startFetchDate.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
         println("查询结果 : "+ baseTodoNeedCreateClock.size() + "个 Clock");
     }
 
@@ -178,42 +178,60 @@ class ClockData {
     def handleClockAutoIncrement(List repeatTodoNeedCreateClock,List baseTodoNeedCreateClock){
         try{
 
-            println "处理Clock id 自增长开始";
+            println "处理Clock id 自增长开始" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}";
             Date handleStart = new Date();
 
             // 获取数据库连接对象
             conn = sql.getDataSource().getConnection();
             // 关闭自动提交
             conn.setAutoCommit(false);
+            // 执行写锁定
+            String lock = "lock table `clock` write;";
+            // 预编译
+            pstmt = conn.prepareStatement(lock);
+            // 执行
+            pstmt.execute();
             // 查询数据库中时间的数量(id 最大值)
-            String query1 = "select max(id) from `clock` for update";
+            String query1 = "select max(id) from `clock`";
             // 预编译
             pstmt = conn.prepareStatement(query1);
             // 获取结果集
             rs = pstmt.executeQuery();
             // 获取时间的数量
-            Long oldAutoIncrement = -1;
+            Long oldAutoIncrement = null;
             while(rs.next()){
                 oldAutoIncrement = rs.getLong(1) + 1;
             }
-
-            // 获取要创建的 clock 的数量
-            Long size = repeatTodoNeedCreateClock.size() + baseTodoNeedCreateClock.size();
-            // 计算新的自增长的值
-            Long newAutoIncrement = oldAutoIncrement + size
-            // 更改自增长的值
-            String query2 = "alter table `clock` AUTO_INCREMENT = ?";
-            // 预编译
-            pstmt = conn.prepareStatement(query2);
-            // 设置参数
-            pstmt.setLong(1,newAutoIncrement);
-            // 执行
+            if(oldAutoIncrement){
+                // 获取要创建的 clock 的数量
+                Long size = repeatTodoNeedCreateClock.size() + baseTodoNeedCreateClock.size();
+                // 计算新的自增长的值
+                Long newAutoIncrement = oldAutoIncrement + size
+                // 更改自增长的值
+                String query2 = "alter table `clock` AUTO_INCREMENT = ?";
+                // 预编译
+                pstmt = conn.prepareStatement(query2);
+                // 设置参数
+                pstmt.setLong(1,newAutoIncrement);
+                // 执行
+                pstmt.execute();
+            } else {
+                throw new Exception("自增长设置失败!")
+            }
+            // 执行解锁
+            String unlock = "unlock table;";
+            //　预编译
+            pstmt = conn.prepareStatement(unlock);
+            //　执行
             pstmt.execute();
+
             // 提交
             conn.commit();
+            // 解锁
+            conn.setAutoCommit(true);
 
             Date handleEnd = new Date();
-            println "处理Clock id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms";
+            println "处理Clock id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}";
 
             // 返回自增长的值
             return oldAutoIncrement;
@@ -262,7 +280,7 @@ class ClockData {
 
             // 结束处理
             Date  endHandle = new Date ()
-            println('Clock 插入预处理耗时 : ' + (endHandle.getTime() - startHandle.getTime()) + "ms")
+            println('Clock 插入预处理耗时 : ' + (endHandle.getTime() - startHandle.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}")
 
             // 执行批量插入操作
             pstmt.executeBatch();
@@ -271,7 +289,7 @@ class ClockData {
 
             // 结束插入
             Date endInsert = new Date()
-            println('Clock 执行插入耗时 :' + (endInsert.getTime() - endHandle.getTime()) + "ms");
+            println('Clock 执行插入耗时 :' + (endInsert.getTime() - endHandle.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
 
             // 返回clock 新旧 id 的映射
             return oldClockIdAndNewClockIdMap;
