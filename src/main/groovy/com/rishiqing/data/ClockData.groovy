@@ -1,6 +1,7 @@
 package com.rishiqing.data
 
 import com.rishiqing.Clock
+import com.rishiqing.Todo
 import com.rishiqing.ds.ClockDs
 import com.rishiqing.util.DateUtil
 import com.rishiqing.util.ResourceUtil
@@ -10,6 +11,7 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
+import java.sql.Timestamp
 
 /**
  * Created by Thinkpad on 2017/6/2.
@@ -159,7 +161,7 @@ class ClockData {
     def generator(List<Clock> repeatTodoNeedCreateClock,List<Map> baseTodoNeedCreateClock, Map<Long,Long> oldTodoIdAndNewTodoIdMap){
         Map<Long,Long> oldClockIdAndNewClockId = [:];
         // 处理自增长值并且获取到原来的自增长值
-        Long oldAutoIncrement = handleClockAutoIncrement(repeatTodoNeedCreateClock,baseTodoNeedCreateClock);
+        Long oldAutoIncrement = sysInsertClock(repeatTodoNeedCreateClock,baseTodoNeedCreateClock);
         // 执行创建操作
         oldClockIdAndNewClockId = batchInsertClock(repeatTodoNeedCreateClock,baseTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
         // 处理旧的一直提醒，把他们的 alwaysRepeat 关掉
@@ -233,10 +235,59 @@ class ClockData {
             Date handleEnd = new Date();
             println "处理Clock id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}";
 
-            // 返回自增长的值
-            return oldAutoIncrement;
+
 
         } catch (SQLException e){
+            e.printStackTrace();
+        } finally {
+            ResourceUtil.resourceClose(conn,pstmt,rs);
+        }
+    }
+
+    /**
+     * 系统插入时间段
+     * @param repeatTodoNeedCreateClock
+     * @param baseTodoNeedCreateClock
+     * @return
+     */
+    def sysInsertClock(List repeatTodoNeedCreateClock,List baseTodoNeedCreateClock){
+        try {
+            // 获取要创建的 clock 的数量
+            Long size = repeatTodoNeedCreateClock.size() + baseTodoNeedCreateClock.size();
+            conn = sql.getDataSource().getConnection();
+            conn.setAutoCommit(false);
+
+            String sysInsertClock = "INSERT INTO clock ( id, clock_user_id, date_created, end_time, is_deleted, start_time, task_date, todo_id, always_alert ) VALUES (( (select max(c.id) from clock as c) + 1) + ?, ?, ?, ?, ?, ?, ?, ?, ? )"
+            pstmt = conn.prepareStatement(sysInsertClock);
+            pstmt.setLong(1,size);
+            pstmt.setLong(2, Todo.SYS_USER_ID);
+            pstmt.setTimestamp(3,new Timestamp(new Date().getTime()));
+            pstmt.setString(4,"00:05");
+            pstmt.setBoolean(5,true);
+            pstmt.setString(6,"00:10");
+            pstmt.setTimestamp(7,new Timestamp(new Date().clearTime().getTime()));
+            pstmt.setLong(8,Todo.SYS_INSERT_TODO_ID);
+            pstmt.setBoolean(9,false);
+            pstmt.executeUpdate();
+
+            String queryInsertId = "SELECT c.id FROM `clock` AS c WHERE c.todo_id = ? ORDER BY c.id DESC LIMIT 0, 1;"
+            pstmt = conn.prepareStatement(queryInsertId);
+            pstmt.setLong(1,Todo.SYS_INSERT_TODO_ID);
+            rs = pstmt.executeQuery();
+            Long oldAutoIncrement = null;
+            while(rs.next()){
+                oldAutoIncrement = rs.getLong(1) - size;
+            }
+
+            conn.commit();
+            conn.setAutoCommit(true);
+
+            // 返回老的自增长的值
+            return oldAutoIncrement;
+
+        } catch (SQLException sqlE){
+            sqlE.printStackTrace();
+        } catch (Exception e){
             e.printStackTrace();
         } finally {
             ResourceUtil.resourceClose(conn,pstmt,rs);
