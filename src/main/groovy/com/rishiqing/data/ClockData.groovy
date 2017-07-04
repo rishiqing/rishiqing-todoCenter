@@ -177,6 +177,7 @@ class ClockData {
      * @param needCreateClock 需要创建的时间的列表
      * @return
      */
+    @Deprecated
     def handleClockAutoIncrement(List repeatTodoNeedCreateClock,List baseTodoNeedCreateClock){
         try{
 

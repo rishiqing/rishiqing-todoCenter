@@ -256,7 +256,7 @@ class TodoRepeatData {
             pstmt.setString(15,"");
             pstmt.setString(16,"");
             pstmt.setNull(17,Types.BIGINT);
-            pstmt.setBoolean(18,false);
+            pstmt.setBoolean(18,true);
             pstmt.setLong(19,-1);
             pstmt.setNull(20,Types.BIGINT);
             pstmt.setNull(21,Types.BIGINT);
