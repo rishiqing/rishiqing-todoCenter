@@ -5,6 +5,7 @@ import com.rishiqing.Todo
 import com.rishiqing.ds.ClockDs
 import com.rishiqing.util.DateUtil
 import com.rishiqing.util.ResourceUtil
+import grails.core.GrailsApplication
 import groovy.sql.Sql
 
 import java.sql.Connection
@@ -19,6 +20,7 @@ import java.sql.Timestamp
  */
 class ClockData {
 
+    def grailsApplication;
     /** groovy sql 对象 */
     private Sql sql = null;
     /**  数据库连接对象 */
@@ -32,8 +34,9 @@ class ClockData {
      * 构造方法
      * @param sql
      */
-    ClockData (Sql sql){
+    ClockData (Sql sql,def grailsApplication){
         this.sql = sql;
+        this.grailsApplication = grailsApplication
     }
 
     // ================================  fetch job ======================================= //
@@ -261,7 +264,13 @@ class ClockData {
             String sysInsertClock = "INSERT INTO clock ( id, clock_user_id, date_created, end_time, is_deleted, start_time, task_date, todo_id, always_alert ) VALUES (( (select max(c.id) from clock as c) + 1) + ?, ?, ?, ?, ?, ?, ?, ?, ? )"
             pstmt = conn.prepareStatement(sysInsertClock);
             pstmt.setLong(1,size);
-            pstmt.setLong(2, Todo.SYS_USER_ID);
+            if("pro" == grailsApplication.config.systemEnvironment){
+                pstmt.setLong(2, grailsApplication.config.PRO_SYS_USER_ID);
+            } else if("beta" == grailsApplication.config.systemEnvironment){
+                pstmt.setLong(2, grailsApplication.config.BETA_SYS_USER_ID);
+            } else {
+                pstmt.setLong(2, grailsApplication.config.DEV_SYS_USER_ID);
+            }
             pstmt.setTimestamp(3,new Timestamp(new Date().getTime()));
             pstmt.setString(4,"00:05");
             pstmt.setBoolean(5,true);

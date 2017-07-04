@@ -1,9 +1,8 @@
 package com.rishiqing
 
-class Todo {
+import grails.core.GrailsApplication
 
-//    transient public static final long SYS_USER_ID = 686938;
-    transient public static final long SYS_USER_ID = 2;
+class Todo {
     // 需要维护的系统生成的日程 id
     transient public static long SYS_INSERT_TODO_ID = 0;
     /** 日程标题 */

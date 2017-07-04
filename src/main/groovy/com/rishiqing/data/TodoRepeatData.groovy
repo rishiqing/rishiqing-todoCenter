@@ -5,6 +5,7 @@ import com.rishiqing.TodoRepeatTag
 import com.rishiqing.ds.TodoRepeatDs
 import com.rishiqing.util.CommonUtil
 import com.rishiqing.util.ResourceUtil
+import grails.core.GrailsApplication
 import groovy.sql.Sql
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -20,6 +21,7 @@ import java.sql.Types;
  */
 class TodoRepeatData {
 
+    private def grailsApplication;
     // groovy sql 对象
     private Sql sql = null;
     // 数据库连接对象
@@ -29,8 +31,9 @@ class TodoRepeatData {
     // 数据库结果集对象
     private ResultSet rs = null;
     // 构造
-    TodoRepeatData (Sql sql) {
+    TodoRepeatData (Sql sql,def grailsApplication) {
         this.sql = sql
+        this.grailsApplication = grailsApplication
     }
 
     // ================================== fetch start =======================================//
@@ -236,7 +239,14 @@ class TodoRepeatData {
 
             conn = sql.getDataSource().getConnection();
             conn.setAutoCommit(false);
-            Long userId = Todo.SYS_USER_ID;
+            Long userId
+            if("pro" == grailsApplication.config.systemEnvironment){
+                userId = grailsApplication.config.PRO_SYS_USER_ID;
+            } else if("beta" == grailsApplication.config.systemEnvironment){
+                userId = grailsApplication.config.BETA_SYS_USER_ID;
+            } else {
+                userId = grailsApplication.config.DEV_SYS_USER_ID;
+            }
             String sysInsert = "INSERT INTO todo ( id, version, date_created, last_updated, p_container, p_display_order, p_finished_time, p_is_done, p_note, p_parent_id, p_planed_time, p_title, p_user_id, created_by_client, receiver_ids, receiver_names, sender_id, is_deleted, cid, repeat_tag_id, sender_todo_id, team_todo_read, clock_alert, kanban_item_id, is_revoke, closing_date_finished, end_date, start_date, todo_deploy_id, is_from_sub_todo, is_change_date, is_repeat_todo, alert_every_day, check_authority, dates, edit_authority, is_archived, inboxpcontainer, is_system ) VALUES (((select MAX(t.id) FROM `todo` AS t) + 1 ) + ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
             pstmt = conn.prepareStatement(sysInsert);
             pstmt.setLong(1,size);
