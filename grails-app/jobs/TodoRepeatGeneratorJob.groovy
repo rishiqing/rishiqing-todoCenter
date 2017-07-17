@@ -77,8 +77,8 @@ class TodoRepeatGeneratorJob {
     static triggers = {
         println "触发器启动 : " + new Date().format("yyyy-MM-dd HH:mm:ss");
         // 使用 cron 表达式进行控制：每天凌晨 00:05 进行生成
-        //cron name: "repeatTodoGenerator",startDelay: 60000, cronExpression: "0 5 0 * * ? *" ;
-        simple startDelay:1000,repeatInterval: 1000*60*60
+        cron name: "repeatTodoGenerator",startDelay: 60000, cronExpression: "0 5 0 * * ? *" ;
+        //simple startDelay:1000,repeatInterval: 1000*60*60
     }
 
 
