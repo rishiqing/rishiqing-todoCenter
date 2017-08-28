@@ -9,7 +9,7 @@ appender('consoleAppender', ConsoleAppender) {
 }
 
 
-if (Environment.isDevelopmentMode()) {
+//if (Environment.isDevelopmentMode()) {
     appender("rootDailyAppender", FileAppender) {
         file = "${System.properties['catalina.base']}${File.separator}logs${File.separator}todoCenter${File.separator}rsq_root_daily_rolling.log"
         append = true
@@ -18,5 +18,5 @@ if (Environment.isDevelopmentMode()) {
         }
     }
 
-}
+//}
 root(error, ['rootDailyAppender'])
