@@ -176,10 +176,6 @@ class CommonUtil {
         if("inbox" == todo.pContainer){
             return false
         }
-//        // 查看日程是否没有 pPlanedTime ，没有则不创建
-//        if(!todo.pPlanedTime){
-//            return false
-//        }
         // 日程没有被完成
         if(!todo.pIsDone){
             // 查看是否有开始和结束时间
