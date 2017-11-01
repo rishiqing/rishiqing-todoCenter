@@ -176,10 +176,10 @@ class CommonUtil {
         if("inbox" == todo.pContainer){
             return false
         }
-        // 查看日程是否没有 pPlanedTime ，没有则不创建
-        if(!todo.pPlanedTime){
-            return false
-        }
+//        // 查看日程是否没有 pPlanedTime ，没有则不创建
+//        if(!todo.pPlanedTime){
+//            return false
+//        }
         // 日程没有被完成
         if(!todo.pIsDone){
             // 查看是否有开始和结束时间
@@ -188,10 +188,12 @@ class CommonUtil {
                 // 变成了单天的日程（在创建重复的那一天），比如：20170101 这天设置的重复，
                 // 那么 startDate = endDate = 20170101，因此，date 是不在这个区间里的（因为今天是 20170102）
                 if(todo.startDate.getTime()<=date.getTime()
-                        && todo.endDate.getTime()>=date.getTime()) return false
+                        && todo.endDate.getTime()>=date.getTime())
+                    return false
             }else{
                 //如果上一条日程的时间和要生成的日期相等则不生成
-                if(todo.pPlanedTime.getTime()>=date.getTime()) return false
+//                if(todo.pPlanedTime.getTime()>=date.getTime()) return false
+                return false
             }
         }
         //如果重复里已被删除的日期里包含了date，则不生成

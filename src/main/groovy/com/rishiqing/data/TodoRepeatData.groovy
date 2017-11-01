@@ -113,7 +113,7 @@ class TodoRepeatData {
         def todoResultList = [];
         // 用于记录日程的 id 组成的字符串，以 “,” 分割
         StringBuffer todoIdsSb = new StringBuffer()
-        list.each { it ->
+        for(def it : list) {
             // 获取日程
             Todo todo = it.todo;
             // 获取日程重复标记
@@ -296,7 +296,7 @@ class TodoRepeatData {
             pstmt = conn.prepareStatement(queryInsertId);
             pstmt.setLong(1,userId);
             rs = pstmt.executeQuery();
-            Long oldAutoIncrement = null;
+            Long oldAutoIncrement = null
             while(rs.next()){
                 Todo.SYS_INSERT_TODO_ID = rs.getLong(1);
                 println "查询系统插入的日程 id = ${Todo.SYS_INSERT_TODO_ID} : ${new Date().format("yyyy-MM-dd HH:mm:ss")}";
