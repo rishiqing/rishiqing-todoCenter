@@ -38,7 +38,7 @@ class TodoRepeatDs {
         map.pIsDone                     =   0
         map.pNote                       =   pNote
         map.pParentId                   =   todo.pParentId
-        map.pPlanedTime                 =   null
+        map.pPlanedTime                 =   timestampToday
         map.pTitle                      =   pTitle
         map.pUserId                     =   todo.pUserId
         map.createdByClient             =   'web'
