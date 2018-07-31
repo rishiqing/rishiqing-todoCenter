@@ -1,6 +1,10 @@
 package com.rishiqing
 
+import grails.core.GrailsApplication
+
 class Todo {
+    // 需要维护的系统生成的日程 id
+    transient public static long SYS_INSERT_TODO_ID = 0;
     /** 日程标题 */
     String pTitle
     /** 日程备注 */

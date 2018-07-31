@@ -50,7 +50,7 @@ class AlertData {
 
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("Alert 检索耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms");
+        println("Alert 检索耗时 : " + (endFetchDate.getTime() - startFetchDate.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
         println("需要生成的 Alert :" + needCreateAlerts.size() + "个");
         // 返回查询结果
         return needCreateAlerts;
@@ -100,7 +100,7 @@ class AlertData {
 
             // 结束处理
             Date  endHandle = new Date ()
-            println('Alert 插入预处理耗时 : ' + (endHandle.getTime() - startHandle.getTime()) + "ms")
+            println('Alert 插入预处理耗时 : ' + (endHandle.getTime() - startHandle.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}")
 
             // 执行
             pstmt.executeBatch();
@@ -109,7 +109,7 @@ class AlertData {
 
             // 结束插入
             Date endInsert = new Date()
-            println('Alert 执行插入耗时 : ' + (endInsert.getTime() - endHandle.getTime()) + "ms")
+            println('Alert 执行插入耗时 : ' + (endInsert.getTime() - endHandle.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}")
 
             // 返回插入数量
             return i;

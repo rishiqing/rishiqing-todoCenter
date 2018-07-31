@@ -1,15 +1,18 @@
 package com.rishiqing.data
 
 import com.rishiqing.Clock
+import com.rishiqing.Todo
 import com.rishiqing.ds.ClockDs
 import com.rishiqing.util.DateUtil
 import com.rishiqing.util.ResourceUtil
+import grails.core.GrailsApplication
 import groovy.sql.Sql
 
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
+import java.sql.Timestamp
 
 /**
  * Created by Thinkpad on 2017/6/2.
@@ -17,6 +20,7 @@ import java.sql.SQLException
  */
 class ClockData {
 
+    def grailsApplication;
     /** groovy sql 对象 */
     private Sql sql = null;
     /**  数据库连接对象 */
@@ -30,8 +34,9 @@ class ClockData {
      * 构造方法
      * @param sql
      */
-    ClockData (Sql sql){
+    ClockData (Sql sql,def grailsApplication){
         this.sql = sql;
+        this.grailsApplication = grailsApplication
     }
 
     // ================================  fetch job ======================================= //
@@ -79,7 +84,7 @@ class ClockData {
         }
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("重复日程 Clock 查询耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms");
+        println("重复日程 Clock 查询耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
         println("查询结果 :" + repeatTodoNeedCreateClock.size() +"个 Clock");
     }
 
@@ -142,7 +147,7 @@ class ClockData {
 
         // 开始查询的时间
         Date endFetchDate = new Date();
-        println("普通日程 Clock 查询耗时 : " + (startFetchDate.getTime() - endFetchDate.getTime()) + "ms");
+        println("普通日程 Clock 查询耗时 : " + (endFetchDate.getTime() - startFetchDate.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
         println("查询结果 : "+ baseTodoNeedCreateClock.size() + "个 Clock");
     }
 
@@ -159,7 +164,7 @@ class ClockData {
     def generator(List<Clock> repeatTodoNeedCreateClock,List<Map> baseTodoNeedCreateClock, Map<Long,Long> oldTodoIdAndNewTodoIdMap){
         Map<Long,Long> oldClockIdAndNewClockId = [:];
         // 处理自增长值并且获取到原来的自增长值
-        Long oldAutoIncrement = handleClockAutoIncrement(repeatTodoNeedCreateClock,baseTodoNeedCreateClock);
+        Long oldAutoIncrement = sysInsertClock(repeatTodoNeedCreateClock,baseTodoNeedCreateClock);
         // 执行创建操作
         oldClockIdAndNewClockId = batchInsertClock(repeatTodoNeedCreateClock,baseTodoNeedCreateClock,oldTodoIdAndNewTodoIdMap,oldAutoIncrement);
         // 处理旧的一直提醒，把他们的 alwaysRepeat 关掉
@@ -175,50 +180,124 @@ class ClockData {
      * @param needCreateClock 需要创建的时间的列表
      * @return
      */
+    @Deprecated
     def handleClockAutoIncrement(List repeatTodoNeedCreateClock,List baseTodoNeedCreateClock){
         try{
 
-            println "处理Clock id 自增长开始";
+            println "处理Clock id 自增长开始" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}";
             Date handleStart = new Date();
 
             // 获取数据库连接对象
             conn = sql.getDataSource().getConnection();
             // 关闭自动提交
             conn.setAutoCommit(false);
+            // 执行写锁定
+            String lock = "lock table `clock` write;";
+            // 预编译
+            pstmt = conn.prepareStatement(lock);
+            // 执行
+            pstmt.execute();
             // 查询数据库中时间的数量(id 最大值)
-            String query1 = "select max(id) from `clock` for update";
+            String query1 = "select max(id) from `clock`";
             // 预编译
             pstmt = conn.prepareStatement(query1);
             // 获取结果集
             rs = pstmt.executeQuery();
             // 获取时间的数量
-            Long oldAutoIncrement = -1;
+            Long oldAutoIncrement = null;
             while(rs.next()){
                 oldAutoIncrement = rs.getLong(1) + 1;
             }
-
-            // 获取要创建的 clock 的数量
-            Long size = repeatTodoNeedCreateClock.size() + baseTodoNeedCreateClock.size();
-            // 计算新的自增长的值
-            Long newAutoIncrement = oldAutoIncrement + size
-            // 更改自增长的值
-            String query2 = "alter table `clock` AUTO_INCREMENT = ?";
-            // 预编译
-            pstmt = conn.prepareStatement(query2);
-            // 设置参数
-            pstmt.setLong(1,newAutoIncrement);
-            // 执行
+            if(oldAutoIncrement){
+                // 获取要创建的 clock 的数量
+                Long size = repeatTodoNeedCreateClock.size() + baseTodoNeedCreateClock.size();
+                // 计算新的自增长的值
+                Long newAutoIncrement = oldAutoIncrement + size
+                // 更改自增长的值
+                String query2 = "alter table `clock` AUTO_INCREMENT = ?";
+                // 预编译
+                pstmt = conn.prepareStatement(query2);
+                // 设置参数
+                pstmt.setLong(1,newAutoIncrement);
+                // 执行
+                pstmt.execute();
+            } else {
+                throw new Exception("自增长设置失败!")
+            }
+            // 执行解锁
+            String unlock = "unlock table;";
+            //　预编译
+            pstmt = conn.prepareStatement(unlock);
+            //　执行
             pstmt.execute();
+
             // 提交
             conn.commit();
+            // 解锁
+            conn.setAutoCommit(true);
 
             Date handleEnd = new Date();
-            println "处理Clock id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms";
+            println "处理Clock id 自增长结束，耗时 : " + (handleEnd.getTime() - handleStart.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}";
 
-            // 返回自增长的值
-            return oldAutoIncrement;
+
 
         } catch (SQLException e){
+            e.printStackTrace();
+        } finally {
+            ResourceUtil.resourceClose(conn,pstmt,rs);
+        }
+    }
+
+    /**
+     * 系统插入时间段
+     * @param repeatTodoNeedCreateClock
+     * @param baseTodoNeedCreateClock
+     * @return
+     */
+    def sysInsertClock(List repeatTodoNeedCreateClock,List baseTodoNeedCreateClock){
+        try {
+            // 获取要创建的 clock 的数量
+            Long size = repeatTodoNeedCreateClock.size() + baseTodoNeedCreateClock.size();
+            conn = sql.getDataSource().getConnection();
+            conn.setAutoCommit(false);
+
+            String sysInsertClock = "INSERT INTO clock ( id, clock_user_id, date_created, end_time, is_deleted, start_time, task_date, todo_id, always_alert ) VALUES (( (select max(c.id) from clock as c) + 1) + ?, ?, ?, ?, ?, ?, ?, ?, ? )"
+            pstmt = conn.prepareStatement(sysInsertClock);
+            pstmt.setLong(1,size);
+            if("pro" == grailsApplication.config.systemEnvironment){
+                pstmt.setLong(2, grailsApplication.config.PRO_SYS_USER_ID);
+            } else if("beta" == grailsApplication.config.systemEnvironment){
+                pstmt.setLong(2, grailsApplication.config.BETA_SYS_USER_ID);
+            } else {
+                pstmt.setLong(2, grailsApplication.config.DEV_SYS_USER_ID);
+            }
+            pstmt.setTimestamp(3,new Timestamp(new Date().getTime()));
+            pstmt.setString(4,"00:05");
+            pstmt.setBoolean(5,true);
+            pstmt.setString(6,"00:10");
+            pstmt.setTimestamp(7,new Timestamp(new Date().clearTime().getTime()));
+            pstmt.setLong(8,Todo.SYS_INSERT_TODO_ID);
+            pstmt.setBoolean(9,false);
+            pstmt.executeUpdate();
+
+            String queryInsertId = "SELECT c.id FROM `clock` AS c WHERE c.todo_id = ? ORDER BY c.id DESC LIMIT 0, 1;"
+            pstmt = conn.prepareStatement(queryInsertId);
+            pstmt.setLong(1,Todo.SYS_INSERT_TODO_ID);
+            rs = pstmt.executeQuery();
+            Long oldAutoIncrement = null;
+            while(rs.next()){
+                oldAutoIncrement = rs.getLong(1) - size;
+            }
+
+            conn.commit();
+            conn.setAutoCommit(true);
+
+            // 返回老的自增长的值
+            return oldAutoIncrement;
+
+        } catch (SQLException sqlE){
+            sqlE.printStackTrace();
+        } catch (Exception e){
             e.printStackTrace();
         } finally {
             ResourceUtil.resourceClose(conn,pstmt,rs);
@@ -262,7 +341,7 @@ class ClockData {
 
             // 结束处理
             Date  endHandle = new Date ()
-            println('Clock 插入预处理耗时 : ' + (endHandle.getTime() - startHandle.getTime()) + "ms")
+            println('Clock 插入预处理耗时 : ' + (endHandle.getTime() - startHandle.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}")
 
             // 执行批量插入操作
             pstmt.executeBatch();
@@ -271,7 +350,7 @@ class ClockData {
 
             // 结束插入
             Date endInsert = new Date()
-            println('Clock 执行插入耗时 :' + (endInsert.getTime() - endHandle.getTime()) + "ms");
+            println('Clock 执行插入耗时 :' + (endInsert.getTime() - endHandle.getTime()) + "ms" + "     ${new Date().format("yyyy-MM-dd HH:mm:ss")}");
 
             // 返回clock 新旧 id 的映射
             return oldClockIdAndNewClockIdMap;

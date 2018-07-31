@@ -193,9 +193,11 @@ class CommonUtil {
                 // 那么 startDate = endDate = 20170101，因此，date 是不在这个区间里的（因为今天是 20170102）
                 if(todo.startDate.getTime()<=date.getTime()
                         && todo.endDate.getTime()>=date.getTime()) return false
-            }else{
+            }else if(todo.pPlanedTime){
                 //如果上一条日程的时间和要生成的日期相等则不生成
                 if(todo.pPlanedTime.getTime()>=date.getTime()) return false
+            }else{
+                return false
             }
         }
         //如果重复里已被删除的日期里包含了date，则不生成

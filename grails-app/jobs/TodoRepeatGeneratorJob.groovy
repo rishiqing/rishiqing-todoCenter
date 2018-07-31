@@ -3,6 +3,7 @@ import com.rishiqing.Clock
 import com.rishiqing.data.AlertData
 import com.rishiqing.data.ClockData
 import com.rishiqing.data.TodoRepeatData
+import grails.core.GrailsApplication
 import groovy.sql.Sql
 
 import javax.sql.DataSource
@@ -68,6 +69,7 @@ import javax.sql.DataSource
 class TodoRepeatGeneratorJob {
 
     /** 注入 */
+    GrailsApplication grailsApplication;
     DataSource dataSource;
     /** 当前时间为空 */
     static Date currentDate = null;
@@ -76,6 +78,7 @@ class TodoRepeatGeneratorJob {
         println "触发器启动 : " + new Date().format("yyyy-MM-dd HH:mm:ss");
         // 使用 cron 表达式进行控制：每天凌晨 00:05 进行生成
         cron name: "repeatTodoGenerator",startDelay: 60000, cronExpression: "0 5 0 * * ? *" ;
+        //simple startDelay:1000,repeatInterval: 1000*60*60
     }
 
 
@@ -87,9 +90,9 @@ class TodoRepeatGeneratorJob {
         println ("============================================================");
         println ("触发时间 : " + new Date().format("yyyy-MM-dd HH:mm:ss"));
         // 重复日程生成器
-        Map oldTodoIdAndNewTodoIdMap = todoBuilder(sql);
+        Map oldTodoIdAndNewTodoIdMap = todoBuilder(sql,grailsApplication);
         // 时间生成器
-        Map oldClockIdAndNewClockIdMap = clockBuilder(oldTodoIdAndNewTodoIdMap?oldTodoIdAndNewTodoIdMap:[:],sql);
+        Map oldClockIdAndNewClockIdMap = clockBuilder(oldTodoIdAndNewTodoIdMap?oldTodoIdAndNewTodoIdMap:[:],sql,grailsApplication);
         // 提醒生成器
         alertBuilder(oldClockIdAndNewClockIdMap?oldClockIdAndNewClockIdMap:[:],sql);
         println ("============================================================");
@@ -100,11 +103,11 @@ class TodoRepeatGeneratorJob {
      * 日程生成器
      * @return
      */
-    def todoBuilder(Sql sql){
+    def todoBuilder(Sql sql,def grailsApplication){
         // 开始进行生成操作
         println("----------------- repeat todo job start --------------------");
         // 创建重复日程生成对象
-        TodoRepeatData todoRepeatData = new TodoRepeatData(sql);
+        TodoRepeatData todoRepeatData = new TodoRepeatData(sql,grailsApplication);
         // 开始查询，获取到所有需要进行创建的重复日程的信息.
         List<Map> needCreateTodos = todoRepeatData.fetch();
         // 启动日程创建
@@ -120,10 +123,10 @@ class TodoRepeatGeneratorJob {
      * @param oldTodoIdAndNewTodoIdMap
      * @return
      */
-    def clockBuilder(Map oldTodoIdAndNewTodoIdMap,Sql sql){
+    def clockBuilder(Map oldTodoIdAndNewTodoIdMap,Sql sql,def grailsApplication){
         Map<Long,Long> oldClockIdAndNewClockIdMap = [:];
         println("----------------- clock job start --------------------------");
-        ClockData clockData = new ClockData(sql);
+        ClockData clockData = new ClockData(sql,grailsApplication);
         // 查询需要创建的时间
         List<Clock> repeatTodoNeedCreateClock = [];
         List<Map> baseTodoNeedCreateClock = [];
