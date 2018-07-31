@@ -177,7 +177,11 @@ class CommonUtil {
             return false
         }
         // 查看日程是否没有 pPlanedTime ，没有则不创建
-        if(!todo.pPlanedTime){
+//        if(!todo.pPlanedTime){
+//            return false
+//        }
+        // 如果日程没有起止时间，则不创建
+        if(!todo.startDate || !todo.endDate) {
             return false
         }
         // 日程没有被完成
